@@ -1,0 +1,25 @@
+<svg width="800" height="1000" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#ffffff"/>
+  <!-- Simple header -->
+  <text x="50" y="70" font-family="Arial, sans-serif" font-size="38" font-weight="bold" fill="#000000">JOHN DOE</text>
+  <text x="50" y="100" font-family="Arial, sans-serif" font-size="14" fill="#333333">Software Engineer | email@example.com | +1 234 567 890</text>
+  <line x1="50" y1="120" x2="750" y2="120" stroke="#000000" stroke-width="1"/>
+  
+  <!-- Simple sections -->
+  <text x="50" y="170" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#000000">OBJECTIVE</text>
+  <rect x="50" y="185" width="700" height="60" fill="#ffffff" stroke="#cccccc" stroke-width="1"/>
+  
+  <text x="50" y="280" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#000000">WORK EXPERIENCE</text>
+  <rect x="50" y="295" width="700" height="120" fill="#ffffff" stroke="#cccccc" stroke-width="1"/>
+  <rect x="50" y="430" width="700" height="120" fill="#f9f9f9" stroke="#cccccc" stroke-width="1"/>
+  
+  <text x="50" y="590" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#000000">EDUCATION</text>
+  <rect x="50" y="605" width="700" height="100" fill="#ffffff" stroke="#cccccc" stroke-width="1"/>
+  
+  <text x="50" y="750" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#000000">SKILLS</text>
+  <rect x="50" y="765" width="700" height="70" fill="#f9f9f9" stroke="#cccccc" stroke-width="1"/>
+  
+  <!-- Template Label -->
+  <text x="400" y="980" font-family="Arial, sans-serif" font-size="12" fill="#666666" text-anchor="middle">Simple Template</text>
+</svg>
+

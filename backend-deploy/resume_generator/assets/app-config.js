@@ -13,7 +13,7 @@ window.APP_CONFIG = {
   // backend (e.g. frontend on Cloudflare Pages, backend on its own host).
   // Leave empty for local dev — same-origin relative paths are used instead.
   // Example: 'https://your-backend-host.com/resume_generator/api'
-  PROD_API_BASE: 'https://airesume.infinityfree.io/resume_generator/api',
+  PROD_API_BASE: '',
 };
 
 window.AR_resolveApiBase = function () {

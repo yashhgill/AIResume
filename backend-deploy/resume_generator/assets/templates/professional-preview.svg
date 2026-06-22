@@ -1,0 +1,33 @@
+<svg width="800" height="1000" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#ffffff"/>
+  <!-- Professional Header -->
+  <rect x="0" y="0" width="800" height="100" fill="#1e40af"/>
+  <text x="400" y="50" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#ffffff" text-anchor="middle">JOHN DOE</text>
+  <text x="400" y="75" font-family="Arial, sans-serif" font-size="12" fill="#bfdbfe" text-anchor="middle">Software Engineer | email@example.com | +1 234 567 890</text>
+  
+  <!-- Professional Summary -->
+  <rect x="50" y="130" width="700" height="2" fill="#3b82f6"/>
+  <text x="50" y="160" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1e40af">PROFESSIONAL SUMMARY</text>
+  <rect x="50" y="180" width="700" height="90" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  
+  <!-- Core Competencies -->
+  <text x="50" y="310" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1e40af">CORE COMPETENCIES</text>
+  <rect x="50" y="330" width="700" height="60" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+  
+  <!-- Professional Experience -->
+  <text x="50" y="430" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1e40af">PROFESSIONAL EXPERIENCE</text>
+  <rect x="50" y="450" width="700" height="130" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+  <rect x="50" y="600" width="700" height="130" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  
+  <!-- Education -->
+  <text x="50" y="770" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1e40af">EDUCATION</text>
+  <rect x="50" y="790" width="700" height="110" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+  
+  <!-- Certifications -->
+  <text x="50" y="940" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1e40af">CERTIFICATIONS</text>
+  <rect x="50" y="960" width="700" height="30" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  
+  <!-- Template Label -->
+  <text x="400" y="990" font-family="Arial, sans-serif" font-size="12" fill="#64748b" text-anchor="middle">Professional Template</text>
+</svg>
+

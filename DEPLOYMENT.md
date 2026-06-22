@@ -1,11 +1,11 @@
-# Deployment Guide — Cloudflare Pages (frontend) + Render (backend)
+# Deployment Guide — Cloudflare Pages (frontend) + InfinityFree (backend)
 
 This splits the app across two free hosts:
 
 - **Frontend** (`frontendreact/` + static parts of `assets/`) → **Cloudflare Pages**
-- **Backend** (`api/` + dynamic parts of `assets/` + Postgres database) → **Render** (free Docker web service + free managed Postgres)
+- **Backend** (`api/` + dynamic parts of `assets/` + MySQL database) → **InfinityFree** (free PHP 8.3 + MariaDB hosting)
 
-Render's free tier doesn't offer MySQL, only Postgres, and has no native PHP buildpack — so the backend runs from the `Dockerfile` in this project's root, and the database is `ai_resume_db_postgres.sql` (a Postgres port of the original MySQL schema; the code already supports both via `DB_DRIVER`).
+No Docker, no environment variables, no database migration — InfinityFree runs plain PHP+MySQL, which is exactly what this project already uses by default, so there are zero code changes needed for this path.
 
 They end up on two different domains, so a few config values need to be filled in to connect them — that's already handled in code (`FRONTEND_BASE_URL`, `ALLOWED_PROD_ORIGIN`, `PROD_API_BASE`, `backend_base_url()`). You just need to fill in the actual URLs once you have them. Do the steps in this order — backend first, since the frontend needs to know its URL.
 
@@ -38,106 +38,95 @@ GitHub will prompt you to sign in the first time (browser popup or a personal ac
 
 ---
 
-## Part A — Backend on Render
+## Part A — Backend on InfinityFree
 
-This needs your GitHub repo from Part 0 already pushed, since Render deploys straight from it.
+### A1. Create the account + hosting
 
-### A1. Create the database first
+1. Go to infinityfree.com and sign up (no credit card needed).
+2. Create a new hosting account — pick any free subdomain (e.g. `airesume.infinityfreeapp.com`) or attach your own domain if you have one.
+3. Wait for it to provision (a few minutes), then open the **Control Panel**.
 
-1. Go to render.com and sign up/sign in (no credit card needed for the free tier).
-2. **New → PostgreSQL**. Give it any name, pick the free plan, and create it.
-3. Wait for it to provision, then open it and copy these from the **Connect** section: **Hostname**, **Port**, **Database**, **Username**, **Password** (Render also shows an "Internal Database URL" / "External Database URL" — the individual fields are easier to paste into `config.local.php`-style values one at a time).
+### A2. Create the database
 
-Free Postgres on Render expires after 30 days unless upgraded — fine for testing/demoing this project, just something to know about.
+1. In the control panel, open **MySQL Databases**, create a new database (note the generated DB name, username, password, and **hostname** — InfinityFree gives you something like `sql200.infinityfree.com`, not `127.0.0.1`).
+2. Open **phpMyAdmin** for that database.
+3. Import `ai_resume_db.sql` (from this project's root) using phpMyAdmin's **Import** tab.
+4. Also run `migration_add_template.sql` and `migration_add_google_auth.sql` the same way (Import tab, or paste into the SQL tab) — `ai_resume_db.sql` doesn't include these yet.
 
-### A2. Create the web service (backend)
+### A3. Upload the backend files
 
-1. **New → Web Service**, connect your GitHub account, and pick the repo from Part 0.
-2. Render should auto-detect the `Dockerfile` at the repo root and set **Runtime: Docker** — if it offers a "Language" dropdown instead, pick **Docker** explicitly.
-3. Pick the **Free** instance type.
-4. Don't deploy yet — open **Environment** first (next step), then deploy.
+A single zip is the easiest way to get this onto InfinityFree in one go — File Manager lets you upload one zip and extract it in place, instead of fighting with a folder upload.
 
-### A3. Configure secrets (environment variables)
-
-Render has no file manager, so secrets go in the web service's **Environment** tab as environment variables instead of `config.local.php` (the code reads both — `config.local.php` for local XAMPP dev, env vars in production, via the `env_or_default()` helper in `config.php`). Add:
-
-| Key | Value |
-|---|---|
-| `DB_DRIVER` | `pgsql` |
-| `DB_HOST` | from A1 (Hostname) |
-| `DB_PORT` | from A1 (Port, usually `5432`) |
-| `DB_NAME` | from A1 (Database) |
-| `DB_USER` | from A1 (Username) |
-| `DB_PASS` | from A1 (Password) |
-| `AUTH_SECRET` | any long random string |
-| `GROQ_API_KEY` | from console.groq.com/keys |
-| `GOOGLE_CLIENT_ID` | from your Google OAuth setup, if using Google Sign-In |
-
-Leave `FRONTEND_BASE_URL` / `ALLOWED_PROD_ORIGIN` out for now — added in Part C, after the frontend is deployed.
-
-Save, then deploy (or it'll auto-deploy after saving env vars). Render builds the Docker image and gives you a URL like `https://airesume-backend.onrender.com`.
-
-Free web services on Render spin down after 15 minutes of no traffic and take ~30-60s to wake up on the next request — the first request after idling will feel slow, that's expected on the free tier.
-
-### A4. Load the database schema
-
-1. In the Postgres dashboard, open the **Connect** tab and use the **PSQL Command** shown there (run it from a terminal on your own computer — it connects to Render's Postgres over the internet, you don't need Render shell access).
-2. Once connected, load the schema:
+1. On your own computer, run:
    ```bash
-   psql "<the connection string Render gave you>" -f ai_resume_db_postgres.sql
+   cd /Users/yashhgill/Desktop/resume_generator
+   bash build-backend.sh
    ```
-   (run from this project's root folder, so the file path resolves; or paste its contents directly into the `psql` prompt).
-3. Test the backend directly: visit `https://your-service.onrender.com/resume_generator/api/templates.php` in a browser — you should get a JSON list of templates back, not an error. (First load may be slow if the service was idle — see A3.)
+   This creates `backend-deploy.zip` in the project folder, with everything already arranged in the right structure (`resume_generator/api/...`, `resume_generator/assets/...`) and your local secrets file deliberately left out (it has the wrong, local-only database details).
+2. In InfinityFree's File Manager, navigate into `htdocs/`, then **Upload** → pick `backend-deploy.zip`.
+3. Once uploaded, right-click it in File Manager and choose **Extract** (sometimes under a "..." menu) — it unpacks straight into `htdocs/resume_generator/...`.
+4. Delete the zip from `htdocs/` afterward (File Manager → right-click → Delete) — no need to keep it on the server.
+
+The important parts that come out of this are `api/` and the three writable subfolders `assets/generated_designs/`, `assets/uploaded_images/`, `assets/user_photos/` (PHP creates files in these at runtime — make sure they're writable, InfinityFree's default permissions are usually fine).
+
+If you'd rather upload a plain folder instead of a zip, the structure to recreate manually is:
+
+```
+htdocs/
+  resume_generator/
+    api/                       (entire folder, except config.local.php)
+    assets/
+      generated_designs/       (empty folder, just needs to exist + be writable)
+      uploaded_images/          (empty folder, same)
+      user_photos/              (empty folder, same)
+      templates/                (the template preview SVGs)
+      site-theme.css, app-config.js, airesume-logo.svg, three-bg.js
+```
+
+### A4. Configure secrets
+
+1. In File Manager, navigate to `htdocs/resume_generator/api/` and create a new file `config.local.php`.
+2. Copy the contents of `config.local.php.example` (from this project) into it, and fill in:
+   - `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` — from step A2 (use the real hostname like `sql200.infinityfree.com`, **not** `127.0.0.1`)
+   - `AUTH_SECRET` — reuse the one already in your local `api/config.local.php` (or any long random string)
+   - `GROQ_API_KEY` — reuse the one already in your local `api/config.local.php` (from console.groq.com/keys)
+   - `GOOGLE_CLIENT_ID` — reuse the one already in your local `api/config.local.php`, if using Google Sign-In
+   - Leave `FRONTEND_BASE_URL` and `ALLOWED_PROD_ORIGIN` blank for now — you'll fill these in during Part C, after the frontend is deployed.
+3. Test it directly: visit `http://your-infinityfree-domain/resume_generator/api/templates.php` in a browser — you should get a JSON list of templates back, not a PHP error.
 
 ---
 
 ## Part B — Frontend on Cloudflare Pages
 
+This uses the GitHub repo from Part 0, so Cloudflare rebuilds and redeploys automatically on every future `git push` — no manual re-uploading.
+
 ### B1. Set the backend URL in the frontend config
 
-Before uploading, edit `assets/app-config.js` in this project and set:
+`assets/app-config.js` already points `PROD_API_BASE` at your real InfinityFree backend (`https://airesume.infinityfree.io/resume_generator/api`). If you ever change the backend's domain, update it there and push to GitHub — Cloudflare picks it up on the next build.
 
-```js
-PROD_API_BASE: 'https://your-service.onrender.com/resume_generator/api',
-```
+### B2. Connect the repo and deploy
 
-(use the real Render URL from Part A2 — Render gives every service `https://` automatically, no cert setup needed).
+1. In the Cloudflare dashboard, go to **Workers & Pages → Create → Pages → Connect to Git**, and authorize/select the GitHub repo from Part 0.
+2. Set the build configuration:
+   - **Build command**: `bash build-pages.sh`
+   - **Build output directory**: `pages-deploy`
+   - Framework preset: **None**
+3. Deploy. Cloudflare clones the repo, runs `build-pages.sh` (which assembles only the static frontend pieces — `frontendreact/` + the static parts of `assets/` — into `pages-deploy/`, deliberately leaving `api/` out since that's backend-only PHP source), and gives you a URL like `https://airesume-xyz.pages.dev`.
 
-### B2. Upload to Pages
-
-1. In the Cloudflare dashboard, go to **Workers & Pages → Create → Pages → Upload assets** (no git repo needed for a one-off upload — you can switch to git-based deploys later if you want).
-2. Give the project a name (this determines your `*.pages.dev` subdomain).
-3. Upload a folder structured exactly like this (mirrors the existing `/resume_generator/...` absolute paths used throughout the HTML files, so nothing else needs to change):
-
-```
-(upload root)/
-  resume_generator/
-    frontendreact/             (entire folder, as-is)
-    assets/                    (entire folder, EXCEPT generated_designs/ and
-                                 uploaded_images/ — those are backend-only,
-                                 dynamically created, don't exist locally
-                                 until someone generates a resume)
-  index.html                   (see B3 below — a tiny redirect, optional but recommended)
-```
-
-4. Deploy. Cloudflare gives you a URL like `https://airesume-xyz.pages.dev`.
-
-### B3. (Optional) Clean root URL
-
-Without this, your site's real entry point is `https://your-site.pages.dev/resume_generator/frontendreact/index.html`. To make the bare domain work too, take `cloudflare-pages-root-redirect.html` (in this project's root folder), rename it to `index.html`, and upload it at the **upload root** (sibling to the `resume_generator` folder, not inside it).
+`cloudflare-pages-root-redirect.html` (in this project's root) is already wired into `build-pages.sh` as the site's root `index.html`, so the bare `*.pages.dev` domain redirects straight to the app — no extra step needed.
 
 ---
 
 ## Part C — Connect them
 
 1. Copy your Pages URL from B2 (e.g. `https://airesume-xyz.pages.dev`).
-2. Back in Render, open the web service's **Environment** tab and add:
-   ```
-   FRONTEND_BASE_URL = https://airesume-xyz.pages.dev
-   ALLOWED_PROD_ORIGIN = https://airesume-xyz.pages.dev
+2. Back in InfinityFree's File Manager, edit `htdocs/resume_generator/api/config.local.php` and set:
+   ```php
+   define('FRONTEND_BASE_URL', 'https://airesume-xyz.pages.dev');
+   define('ALLOWED_PROD_ORIGIN', 'https://airesume-xyz.pages.dev');
    ```
    (no trailing slash, both must match exactly).
-3. Save — Render auto-redeploys the service with the new env vars. No redeploy needed on the Pages side.
+3. Done — no redeploy needed on the Pages side for this step.
 
 ---
 
@@ -145,12 +134,12 @@ Without this, your site's real entry point is `https://your-site.pages.dev/resum
 
 1. Open your Pages URL, sign up / log in, generate a resume.
 2. Confirm: My Resumes page loads, Edit/Download/View/Print all work, and after Save/Cancel in the editor you land back on My Resumes (not a 404) — this confirms `FRONTEND_BASE_URL` is correct.
-3. Open DevTools → Network tab and confirm API calls go to your Render domain, not the Pages domain, with no CORS errors in the console — this confirms `PROD_API_BASE`/`ALLOWED_PROD_ORIGIN` are correct.
-4. If the very first request after a while feels slow or times out, wait ~30-60s and retry — that's Render's free tier waking the service up from idle (see A3), not a bug.
+3. Open DevTools → Network tab and confirm API calls go to your InfinityFree domain, not the Pages domain, with no CORS errors in the console — this confirms `PROD_API_BASE`/`ALLOWED_PROD_ORIGIN` are correct.
 
 ## Notes / known limitations
 
-- Render's free web service spins down after 15 minutes idle (cold start ~30-60s on the next request) and its free Postgres expires after 30 days unless upgraded to a paid plan — fine for testing/demoing, worth knowing if this needs to stay up long-term.
-- If you ever move the backend to a different host, you only need to update `PROD_API_BASE` (frontend) and `FRONTEND_BASE_URL`/`ALLOWED_PROD_ORIGIN` (backend) — no other code changes required. The DB layer also only needs `DB_DRIVER` flipped (`mysql`/`pgsql`) plus matching credentials, since `db.php` already branches on it.
-- `ai_resume_db.sql` (MySQL/MariaDB) is kept in the repo for local XAMPP dev and as a fallback if you ever deploy the backend on a MySQL host instead — `ai_resume_db_postgres.sql` is the one actually used for Render.
+- InfinityFree's free tier has a 10MB upload limit and no SSH access — fine for this app's needs (generated resume HTML files are well under that).
+- InfinityFree's own control panel/dashboard shows ads to you while you're managing your account — it does not inject ads into your actual hosted site, so visitors never see them.
+- If you ever move the backend to a different host, you only need to update `PROD_API_BASE` (frontend) and `FRONTEND_BASE_URL`/`ALLOWED_PROD_ORIGIN` (backend) — no other code changes required.
+- This project also has a `Dockerfile` and `ai_resume_db_postgres.sql` in its root, left over from an earlier Render+Postgres deployment attempt that's no longer being used — safe to ignore or delete, they're not referenced by the InfinityFree path above.
 - `README-DEV.md` in this project describes an older Vite-based frontend setup that no longer applies (the frontend is now plain static HTML/JS under `frontendreact/`) — safe to ignore or delete.
