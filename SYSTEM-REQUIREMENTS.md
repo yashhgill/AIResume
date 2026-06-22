@@ -1,0 +1,26 @@
+# System Requirements for Resume Generator
+
+# Server Requirements
+XAMPP >= 8.0.0
+PHP >= 8.0.0
+MySQL >= 5.7.0 or MariaDB >= 10.3.0
+Apache >= 2.4.0
+
+# PHP Extensions Required
+php-pdo
+php-pdo_mysql
+php-mbstring
+php-json
+
+# Node.js (for React frontend development)
+Node.js >= 18.0.0
+npm >= 9.0.0
+
+# Browser Requirements
+Modern browser with JavaScript enabled (Chrome, Firefox, Edge, Safari)
+
+# Database
+MySQL/MariaDB database: ai_resume_db
+
+# Optional (for production)
+Composer (if using PHP dependencies in future)
