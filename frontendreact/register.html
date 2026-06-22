@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Register — AI Resume</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
+    <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+      body { min-height:100vh; display:flex; align-items:center; justify-content:center; }
+      .auth-card{ width:100%; max-width:520px; padding:32px; box-shadow:0 20px 60px rgba(31,38,135,0.18); }
+      .auth-title{ font-size:28px; margin-bottom:8px; font-weight:800; }
+    </style>
+  </head>
+  <body class="p-4">
+    <div class="auth-card ar-animate">
+      <div class="text-center mb-3"><img src="/resume_generator/assets/airesume-logo.svg" alt="AI Resume" style="height:64px;"/></div>
+      <div class="auth-title ar-gradient-text text-center">Create your account</div>
+      <p class="text-muted text-center">Register to manage your resumes with <strong>AI Resume</strong>.</p>
+
+      <div id="google-btn-container" class="ar-google-btn-wrap mb-2"></div>
+      <div class="ar-divider">or register with email</div>
+
+      <form id="regForm">
+        <div class="mb-2"><input id="name" class="form-control" placeholder="name"/></div>
+        <div class="mb-2"><input id="email" class="form-control" placeholder="email"/></div>
+        <div class="mb-2"><input id="phone" class="form-control" placeholder="phone number"/></div>
+        <div class="mb-2"><input id="password" type="password" class="form-control" placeholder="password"/></div>
+        <div class="mb-2"><input id="confirm_password" type="password" class="form-control" placeholder="confirm password"/></div>
+        <div class="mb-2"><button class="btn btn-primary w-100" type="submit">Register</button></div>
+      </form>
+      <p class="text-center">Already have an account? <a href="login.html">Login here</a></p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/resume_generator/assets/three-bg.js"></script>
+    <script src="/resume_generator/assets/app-config.js"></script>
+    <script>
+      window.AR_renderGoogleButton('google-btn-container', 'index.html');
+
+      // Use absolute URL to Apache server (port 80) for PHP API
+      const API_BASE = window.AR_resolveApiBase();
+      console.log('API_BASE:', API_BASE, 'Protocol:', window.location.protocol, 'Port:', window.location.port);
+      document.getElementById('regForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const phone = document.getElementById('phone').value.trim();
+        const confirm = document.getElementById('confirm_password').value;
+
+        // Validation
+        if (!name || !email || !password) {
+          alert('Please fill in all required fields (name, email, password)');
+          return;
+        }
+
+        if (password !== confirm) {
+          alert('Passwords do not match');
+          return;
+        }
+
+        if (password.length < 6) {
+          alert('Password must be at least 6 characters long');
+          return;
+        }
+
+        // Disable button during submission
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Registering...';
+
+        try {
+          const url = API_BASE + '/users.php';
+          console.log('Fetching URL:', url);
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ name, email, phone: phone || null, password })
+          });
+
+          const text = await res.text();
+          let j;
+          try {
+            j = JSON.parse(text);
+          } catch (parseErr) {
+            console.error('Response not JSON:', text);
+            alert('Server error: Invalid response. Check console for details.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Register';
+            return;
+          }
+
+          if (res.ok && j.user_id) {
+            alert('Registration successful! Redirecting to login...');
+            window.location = 'login.html';
+          } else {
+            const errorMsg = j.error || j.message || 'Registration failed';
+            alert('Register failed: ' + errorMsg + (j.message ? '\nDetails: ' + j.message : ''));
+            console.error('Registration error:', j);
+          }
+        } catch (err) {
+          console.error('Network error:', err);
+          alert('Network error: Cannot connect to server. Make sure:\n1. XAMPP Apache is running\n2. Database is set up\n3. Check browser console for details');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Register';
+        }
+      });
+    </script>
+  </body>
+</html>

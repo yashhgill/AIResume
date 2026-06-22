@@ -1,0 +1,42 @@
+<?php
+// ============================================================================
+// LOCAL SECRETS — copy this file to "config.local.php" (same folder) and
+// fill in your real values. config.local.php is in .gitignore, so it will
+// NEVER be committed/pushed — that's the point of splitting it out.
+// ============================================================================
+
+// --- Database (XAMPP MySQL, running on YOUR machine only) ---
+define('DB_HOST', '127.0.0.1');
+define('DB_NAME', 'ai_resume_db');
+define('DB_USER', 'root');
+define('DB_PASS', ''); // your XAMPP MySQL password, if any
+// DB_DRIVER/DB_PORT: leave as-is for local MySQL/XAMPP dev. If deploying
+// this backend on Render (managed Postgres, not MySQL, on its free tier),
+// override these four + the two above with your Render Postgres
+// connection details instead:
+//   define('DB_DRIVER', 'pgsql');
+//   define('DB_HOST', 'your-db.render.com');
+//   define('DB_PORT', 5432);
+//   define('DB_NAME', 'your_render_db_name');
+//   define('DB_USER', 'your_render_db_user');
+//   define('DB_PASS', 'your_render_db_password');
+define('DB_DRIVER', 'mysql');
+define('DB_PORT', '');
+
+// --- Token signing secret (generate a long random string) ---
+define('AUTH_SECRET', 'paste-a-long-random-string-here');
+
+// --- Groq API (https://console.groq.com/keys) ---
+define('GROQ_API_KEY', 'your_groq_api_key_here');
+
+// --- Google Sign-In Client ID (https://console.cloud.google.com/apis/credentials) ---
+// Create an "OAuth client ID" of type "Web application".
+// Authorized JavaScript origins: http://localhost, http://localhost:3000, http://127.0.0.1
+define('GOOGLE_CLIENT_ID', 'your_google_oauth_client_id.apps.googleusercontent.com');
+
+// --- Cross-domain deployment (frontend on Cloudflare Pages, backend here) ---
+// Leave both blank for local dev / single-host setups. Once deployed,
+// set both to your Cloudflare Pages URL (no trailing slash), e.g.
+// 'https://your-frontend.pages.dev' - they must match.
+define('FRONTEND_BASE_URL', '');
+define('ALLOWED_PROD_ORIGIN', '');

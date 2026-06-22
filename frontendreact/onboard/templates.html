@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Choose your template — AI Resume</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
+    <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml" />
+    <script src="/resume_generator/assets/app-config.js"></script>
+    <style>
+      /* Carousel / card legacy styles (kept for backward-compat) */
+      .template-card { border-radius:10px; overflow:hidden; background:#fff; box-shadow:0 6px 20px rgba(20,30,60,0.06); }
+      .template-thumb { height:380px; background:linear-gradient(180deg,#fbfdff,#eef6ff); display:flex; align-items:center; justify-content:center; }
+      .template-thumb img { max-width:78%; max-height:90%; object-fit:contain; }
+      .ribbon { position:absolute; right:10px; top:10px; background:#4caf50; color:#fff; padding:6px 10px; border-radius:8px; font-weight:700; font-size:12px; }
+      .carousel-wrap { display:flex; gap:28px; align-items:center; justify-content:center; }
+      .arrow { width:48px; height:48px; border-radius:50%; background:#111827; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+      .template-selected { box-shadow:0 22px 40px rgba(30,50,80,0.12); transform:scale(1.03); border:3px solid #e6f0ff; }
+      .progress-dots { height:8px; width:160px; background:#eef2ff; border-radius:8px; position:relative; }
+      .progress-fill { position:absolute; height:8px; left:0; top:0; background:#3b82f6; border-radius:8px; }
+
+      /* New grid layout styles to match the reference */
+      .pill{ padding:8px 12px; border-radius:999px; border:1px solid rgba(11,92,211,0.08); background:#fff; cursor:pointer; font-size:14px }
+      .pill.active{ background:linear-gradient(90deg,#fff,#f1f9ff); box-shadow:0 6px 18px rgba(11,92,211,0.06); border-color:transparent }
+      .template-large{ background:#fff;border-radius:14px;padding:0;box-shadow:0 18px 60px rgba(10,20,40,0.06);overflow:hidden;border:1px solid rgba(0,0,0,0.03); }
+      .template-thumb-large{ height:420px; display:flex;align-items:center;justify-content:center;background:#fbfdff;border-radius:8px; }
+      .template-thumb-large img{ max-width:100%; max-height:100%; object-fit:contain }
+      .template-actions{ display:flex; gap:8px; margin-top:10px; justify-content:center;padding-bottom:12px }
+      @media(max-width:1100px){ #grid{grid-template-columns:repeat(3,1fr);} }
+      @media(max-width:880px){ #grid{grid-template-columns:repeat(2,1fr);} .template-thumb-large{height:280px} }
+      @media(max-width:520px){ #grid{grid-template-columns:repeat(1,1fr);} }
+      @media(max-width:480px){ #form-content{ grid-template-columns: 1fr !important; } }
+      
+      /* Loading overlay styles */
+      #loading-overlay {
+        backdrop-filter: blur(4px);
+        animation: fadeIn 0.3s ease-in;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .spinner-border {
+        animation: spinner-border 0.75s linear infinite;
+      }
+      @keyframes spinner-border {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-white shadow-sm">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="../index.html">
+          <img src="/resume_generator/assets/airesume-logo.svg" alt="AI Resume" style="height:36px; margin-right:12px;"/>
+          <span class="fw-bold">AI Resume</span>
+        </a>
+        <div id="lang-display" class="text-muted"></div>
+      </div>
+    </nav>
+
+    <main>
+      <div style="background:#eef6ff;padding:38px 0;border-bottom:1px solid rgba(0,0,0,0.03)">
+        <div class="container d-flex align-items-center justify-content-between" style="flex-wrap:wrap;gap:12px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <img src="/resume_generator/assets/airesume-logo.svg" style="height:36px" alt="logo">
+            <h2 id="page-title" style="margin:0;color:#0b5ed7;font-weight:700;font-size:1.3rem">Please choose a template</h2>
+          </div>
+          <div>
+            <a id="skip-step" class="btn btn-outline-primary">Skip</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="container" style="padding:28px 0 60px 0">
+        <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;">
+          <div style="max-width:1100px;width:100%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+              <div id="filter-pills" style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="pill active" data-filter="all">All templates</button>
+                <button class="pill" data-filter="classic">Classic</button>
+                <button class="pill" data-filter="modern">Modern</button>
+                <button class="pill" data-filter="professional">Professional</button>
+                <button class="pill" data-filter="creative">Creative</button>
+                <button class="pill" data-filter="two-column">Two-column</button>
+              </div>
+              <div style="color:#6b7280;font-size:14px">Showing <span id="count-templates">0</span> templates</div>
+            </div>
+
+            <div id="grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+              <!-- cards injected -->
+            </div>
+
+            <div style="margin-top:22px;text-align:center;color:#6b7280">Tip: click a template to preview or use "Create with AI" to auto-generate content.</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const API_BASE = window.AR_resolveApiBase();
+
+      // App is English-only
+      const strings = { title: 'Please choose a template', skip: 'Skip', showing: 'Showing', preview: 'Preview', createAI: 'Create with AI' };
+      document.getElementById('page-title').textContent = strings.title;
+      document.getElementById('skip-step').textContent = strings.skip;
+
+      let templates = [];
+
+      const fallback = [
+        { id:'classic', label:'Classic', type:'WORD | PDF', preview:'/resume_generator/assets/templates/classic-preview.svg' },
+        { id:'modern', label:'Modern', type:'WORD | PDF', preview:'/resume_generator/assets/templates/modern-preview.svg' },
+        { id:'profile', label:'Profile', type:'WORD | PDF', preview:'/resume_generator/assets/templates/profile-preview.svg' },
+        { id:'professional', label:'Professional', type:'WORD | PDF', preview:'/resume_generator/assets/templates/professional-preview.svg' },
+        { id:'clean', label:'Clean', type:'WORD | PDF', preview:'/resume_generator/assets/templates/clean-preview.svg' },
+        { id:'creative', label:'Creative', type:'WORD | PDF', preview:'/resume_generator/assets/templates/creative-preview.svg' },
+        { id:'simple', label:'Simple', type:'WORD | PDF', preview:'/resume_generator/assets/templates/simple-preview.svg' },
+        { id:'two-column', label:'Two-column', type:'WORD | PDF', preview:'/resume_generator/assets/templates/two-column-preview.svg' }
+      ];
+
+      async function fetchTemplates(){
+        try{
+          const res = await fetch(API_BASE + '/templates.php');
+          if (res.ok){
+            const j = await res.json();
+            if (Array.isArray(j.templates)) templates = j.templates;
+            else templates = fallback;
+          } else templates = fallback;
+        }catch(e){ templates = fallback; }
+        renderGrid();
+      }
+
+      function renderGrid(filter){
+        filter = filter || 'all';
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        const visible = filter === 'all' ? templates : templates.filter(t => (t.id || '').toLowerCase() === filter);
+        if (visible.length === 0) {
+          grid.innerHTML = '<div class="text-muted" style="grid-column:1/-1;text-align:center;padding:40px 0;">No templates match this filter.</div>';
+          document.getElementById('count-templates').textContent = 0;
+          return;
+        }
+        visible.forEach(t=>{
+          const card = document.createElement('div'); card.className = 'template-large';
+          card.innerHTML = `
+            <div style="border-radius:10px;overflow:hidden">
+              <div class="template-thumb-large"><img src="${t.preview || '/resume_generator/assets/airesume-logo.svg'}" alt="${t.label||t.id}"></div>
+            </div>
+            <div style="padding-top:10px;text-align:center;padding-left:6px;padding-right:6px"><div style="font-weight:700">${t.label||t.id}</div><div style="color:#6b7280;font-size:13px">${t.type||'WORD | PDF'}</div></div>
+            <div class="template-actions">
+              <button class="btn btn-outline-secondary btn-sm btn-preview">${strings.preview}</button>
+              <button class="btn btn-primary btn-sm btn-ai">${strings.createAI}</button>
+            </div>
+          `;
+          grid.appendChild(card);
+          card.querySelector('.btn-preview').addEventListener('click', ()=> openPreview(t));
+          card.querySelector('.btn-ai').addEventListener('click', ()=> openAICreate(t));
+        });
+        document.getElementById('count-templates').textContent = visible.length;
+      }
+
+      function setupFilterPills(){
+        document.querySelectorAll('#filter-pills .pill').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            document.querySelectorAll('#filter-pills .pill').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            renderGrid(btn.getAttribute('data-filter'));
+          });
+        });
+      }
+      setupFilterPills();
+
+      function openPreview(t){
+        const modal = document.createElement('div'); modal.style.position='fixed'; modal.style.left=0; modal.style.top=0; modal.style.right=0; modal.style.bottom=0; modal.style.background='rgba(0,0,0,0.6)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.zIndex=6000;
+        const box = document.createElement('div'); box.style.width='1100px'; box.style.maxWidth='96%'; box.style.maxHeight='92vh'; box.style.background='#fff'; box.style.borderRadius='12px'; box.style.overflow='hidden'; box.style.boxShadow='0 40px 120px rgba(10,20,40,0.5)'; box.style.display='flex'; box.style.flexDirection='column';
+        box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid #f1f5f9;flex-shrink:0;"><div style="font-weight:700">Preview — ${t.label||t.id}</div><button id="closePrev" class="btn btn-sm btn-outline-secondary">Close</button></div><div style="padding:18px; background:#f8fbff; display:flex; justify-content:center; align-items:center; min-height:0; flex:1 1 auto; max-height:80vh; overflow:auto;"><img src="${t.preview||'/resume_generator/assets/airesume-logo.svg'}" style="max-height:100%; max-width:100%; object-fit:contain"></div>`;
+        modal.appendChild(box); document.body.appendChild(modal);
+        modal.querySelector('#closePrev').addEventListener('click', ()=> modal.remove());
+        modal.addEventListener('click', (e)=>{ if (e.target===modal) modal.remove(); });
+      }
+
+      function openAICreate(t){
+        const payloadUser = (function(){ try{ const tok = localStorage.getItem('rg_token'); if (!tok) return null; const p = tok.split('.')[1]; return JSON.parse(atob(p)); }catch(e){return null} })();
+        if (!payloadUser || !payloadUser.user_id){
+          if (!confirm('You must be logged in to create a resume. Go to login?')) return window.location.href='login.html';
+        }
+
+        const modal = document.createElement('div');
+        modal.style.position='fixed'; modal.style.left=0; modal.style.top=0; modal.style.right=0; modal.style.bottom=0; modal.style.background='rgba(0,0,0,0.5)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.zIndex=4000;
+        const box = document.createElement('div'); box.style.width='760px'; box.style.maxWidth='95%'; box.style.maxHeight='90vh'; box.style.overflowY='auto'; box.style.background='#fff'; box.style.borderRadius='10px'; box.style.padding='18px'; box.style.boxShadow='0 30px 80px rgba(10,20,40,0.3)'; box.style.position='relative';
+        box.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-weight:700">${strings.createAI} — ${t.label||t.id}</div><button id="closeCreate" class="btn btn-sm btn-outline-secondary">Close</button></div>
+          <div id="form-content" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="grid-column:1/3">
+              <label class="form-label">Your Name <span class="text-muted small">(required)</span></label>
+              <input id="ai-name" class="form-control" placeholder="e.g. John Doe" required />
+            </div>
+            <div>
+              <label class="form-label">Job title <span class="text-muted small">(required)</span></label>
+              <input id="ai-field" class="form-control" placeholder="e.g. Senior Software Engineer" required />
+            </div>
+            <div>
+              <label class="form-label">Tone</label>
+              <input id="ai-tone" class="form-control" placeholder="e.g. Professional, Friendly" value="Professional" />
+            </div>
+            <div style="grid-column:1/3">
+              <label class="form-label">Education</label>
+              <textarea id="ai-education" class="form-control" rows="2" placeholder="List degrees or certifications (e.g. Bachelor of Computer Science, University XYZ, 2020)"></textarea>
+            </div>
+            <div style="grid-column:1/3">
+              <label class="form-label">Skills (comma separated)</label>
+              <input id="ai-skills" class="form-control" placeholder="E.g. JavaScript, PHP, SQL, React, Node.js" />
+            </div>
+            <div style="grid-column:1/3">
+              <label class="form-label">Work Experience</label>
+              <textarea id="ai-experience" class="form-control" rows="3" placeholder="Add key achievements or past roles (e.g. Software Engineer at Company ABC, 2020-2023, Developed web applications...)"></textarea>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button id="generateBtn" class="btn btn-primary">Generate</button></div>
+          <div id="ai-msg" style="margin-top:12px"></div>
+          <div id="loading-overlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.95);border-radius:10px;z-index:1000;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+            <div class="spinner-border text-primary" role="status" style="width:3rem;height:3rem;">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <div style="text-align:center;">
+              <h5 style="color:#0b5ed7;margin-bottom:8px;font-weight:600;">Generating Resume...</h5>
+              <p style="color:#6b7280;margin:0;font-size:14px;">AI is generating your resume using the <strong>${t.label||t.id}</strong> template</p>
+              <p style="color:#9ca3af;margin-top:8px;font-size:12px;">Please wait a moment, this may take 10-30 seconds</p>
+            </div>
+          </div>
+        `;
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+        
+        const loadingOverlay = box.querySelector('#loading-overlay');
+        const formContent = box.querySelector('#form-content');
+        const generateBtn = box.querySelector('#generateBtn');
+        const closeBtn = box.querySelector('#closeCreate');
+        
+        // Function to show loading
+        function showLoading() {
+          loadingOverlay.style.display = 'flex';
+          formContent.style.opacity = '0.3';
+          formContent.style.pointerEvents = 'none';
+          generateBtn.disabled = true;
+          generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+          closeBtn.disabled = true;
+          closeBtn.style.opacity = '0.5';
+          closeBtn.style.cursor = 'not-allowed';
+        }
+        
+        // Function to hide loading
+        function hideLoading() {
+          loadingOverlay.style.display = 'none';
+          formContent.style.opacity = '1';
+          formContent.style.pointerEvents = 'auto';
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = 'Generate';
+          closeBtn.disabled = false;
+          closeBtn.style.opacity = '1';
+          closeBtn.style.cursor = 'pointer';
+        }
+        
+        modal.querySelector('#closeCreate').addEventListener('click', ()=> {
+          if (!loadingOverlay.style.display || loadingOverlay.style.display === 'none') {
+            modal.remove();
+          }
+        });
+
+        // prefill from profile + most recent resume, so returning users don't
+        // have to retype everything. Everything stays editable afterward.
+        (async function prefill(){
+          try{
+            if (!payloadUser || !payloadUser.user_id) return;
+
+            const userRes = await fetch(API_BASE + '/users.php?user_id='+encodeURIComponent(payloadUser.user_id));
+            if (userRes.ok) {
+              const wrapped = await userRes.json();
+              const user = wrapped && wrapped.user;
+              const nameEl = modal.querySelector('#ai-name');
+              if (nameEl && !nameEl.value && user && user.name) {
+                nameEl.value = user.name;
+              }
+            }
+
+            const resumesRes = await fetch(API_BASE + '/resumes.php?user_id='+encodeURIComponent(payloadUser.user_id));
+            if (!resumesRes.ok) return;
+            const resumeList = await resumesRes.json();
+            const last = Array.isArray(resumeList) && resumeList.length ? resumeList[0] : null;
+            if (!last) return;
+
+            const setIfEmpty = (id, value) => {
+              const el = modal.querySelector('#' + id);
+              if (el && !el.value && value) el.value = value;
+            };
+            setIfEmpty('ai-field', last.field);
+            setIfEmpty('ai-tone', last.tone);
+            setIfEmpty('ai-education', last.education);
+            setIfEmpty('ai-skills', last.skills);
+            setIfEmpty('ai-experience', last.experience);
+
+            const msg = modal.querySelector('#ai-msg');
+            if (msg && (last.field || last.education || last.skills || last.experience)) {
+              msg.innerHTML = '<div class="text-muted small">Filled in from your last resume — feel free to edit or add to it before generating.</div>';
+            }
+          }catch(e){ /* ignore */ }
+        })();
+
+        modal.querySelector('#generateBtn').addEventListener('click', async ()=>{
+          const name = modal.querySelector('#ai-name')?.value.trim() || '';
+          const field = modal.querySelector('#ai-field').value.trim();
+          const tone = modal.querySelector('#ai-tone').value.trim();
+          const education = modal.querySelector('#ai-education').value.trim();
+          const skills = modal.querySelector('#ai-skills').value.trim();
+          const experience = modal.querySelector('#ai-experience').value.trim();
+          const msg = modal.querySelector('#ai-msg'); msg.innerHTML = '';
+          
+          // Validation
+          if (!name){ msg.innerHTML = '<div class="alert alert-danger">Please enter your name.</div>'; return; }
+          if (!field){ msg.innerHTML = '<div class="alert alert-danger">Please enter the job title you are applying for.</div>'; return; }
+          const token = localStorage.getItem('rg_token');
+          let userId = payloadUser && payloadUser.user_id;
+          if (!userId){
+            // try decode again
+            try{ const parts = token.split('.'); userId = JSON.parse(atob(parts[1])).user_id; }catch(e){}
+          }
+          if (!userId){ if (!confirm('You must be logged in. Go to login?')) return; window.location.href='login.html'; return; }
+
+          // Show loading screen
+          showLoading();
+          
+          try{
+            const headers = { 'Content-Type':'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            const body = { 
+              action:'generate', 
+              user_id: userId, 
+              name: name || (payloadUser && payloadUser.name) || 'Professional Candidate',
+              field, 
+              tone, 
+              education, 
+              skills, 
+              experience, 
+              template: t.id || t.label || null,
+              generate_html_css: true // Use new HTML+CSS generation
+            };
+            const res = await fetch(API_BASE + '/resumes.php', { method: 'POST', headers, body: JSON.stringify(body) });
+            let data = null; try{ data = await res.json(); }catch(e){}
+            
+            // Hide loading screen
+            hideLoading();
+            
+            if (res.ok && data && data.ok){
+              msg.innerHTML = '<div class="alert alert-success"><strong>Success!</strong> Resume generated. Redirecting...</div>';
+              setTimeout(()=>{ window.location.href = '../my-resumes.html'; },1500);
+            } else {
+              console.error('AI create failed', res.status, data);
+              // Log detailed error to console for debugging
+              if (data && data.message) {
+                console.error('Error details:', data.message);
+              }
+              // Show simple user-friendly message only
+              msg.innerHTML = '<div class="alert alert-danger"><strong>Error:</strong> Sorry, something went wrong while generating your resume.</div>';
+            }
+          }catch(e){
+            console.error(e);
+            hideLoading();
+            msg.innerHTML = '<div class="alert alert-danger"><strong>Network Error:</strong> Please check your internet connection and try again.</div>';
+          }
+        });
+      }
+
+      document.getElementById('skip-step').addEventListener('click', function(e){ e.preventDefault(); window.location.href = '../index.html'; });
+
+      fetchTemplates();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/resume_generator/assets/three-bg.js"></script>
+  </body>
+</html>

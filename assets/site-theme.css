@@ -1,0 +1,180 @@
+/* ==========================================================================
+   AI Resume — shared visual theme (colorful / animated / glassmorphism)
+   Loaded on every page alongside Bootstrap. Only adds new look & feel —
+   does not remove or rename any existing Bootstrap classes/IDs used by JS.
+   ========================================================================== */
+
+:root {
+  --ar-violet: #7c3aed;
+  --ar-pink: #ec4899;
+  --ar-blue: #3b82f6;
+  --ar-cyan: #22d3ee;
+  --ar-ink: #0f172a;
+  --ar-glass: rgba(255, 255, 255, 0.72);
+  --ar-glass-border: rgba(255, 255, 255, 0.45);
+  --ar-radius: 18px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  font-family: 'Sora', 'Segoe UI', Arial, sans-serif;
+  color: var(--ar-ink);
+}
+
+/* Animated full-page gradient backdrop, sits behind the 3D canvas and content */
+body {
+  position: relative;
+  min-height: 100vh;
+  background: linear-gradient(120deg, #eef2ff 0%, #fdf2ff 35%, #eafcff 70%, #f5f3ff 100%);
+  background-size: 200% 200%;
+  animation: ar-gradient-pan 18s ease infinite;
+}
+
+@keyframes ar-gradient-pan {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Fixed full-viewport canvas used by three-bg.js. Pure CSS gradient remains
+   visible underneath/around it if WebGL/Three.js fails to load. */
+#bg3d-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+/* Make sure real content always sits above the canvas */
+nav, main, footer, .auth-card, .modal { position: relative; z-index: 1; }
+
+/* ---- Navbar ---- */
+.navbar {
+  background: var(--ar-glass) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--ar-glass-border);
+}
+
+.navbar-brand span {
+  background: linear-gradient(90deg, var(--ar-violet), var(--ar-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+  background: linear-gradient(90deg, var(--ar-violet), var(--ar-pink));
+  border: none;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.btn-primary:hover, .btn-primary:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.45);
+  background: linear-gradient(90deg, var(--ar-violet), var(--ar-pink));
+}
+.btn-outline-primary {
+  border-color: var(--ar-violet);
+  color: var(--ar-violet);
+  transition: transform 0.18s ease;
+}
+.btn-outline-primary:hover { transform: translateY(-2px); }
+.btn, .btn-sm { border-radius: 10px; }
+
+/* ---- Cards / glass surfaces ---- */
+.card, .auth-card, .resume-card, .template-large, .template-card {
+  border-radius: var(--ar-radius) !important;
+  border: 1px solid var(--ar-glass-border) !important;
+  background: var(--ar-glass) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card:hover, .resume-card:hover, .template-large:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 45px rgba(31, 38, 135, 0.18) !important;
+}
+
+/* ---- Entrance animation ---- */
+@keyframes ar-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ar-animate {
+  animation: ar-fade-up 0.7s ease both;
+}
+.ar-animate-1 { animation-delay: 0.05s; }
+.ar-animate-2 { animation-delay: 0.15s; }
+.ar-animate-3 { animation-delay: 0.25s; }
+.ar-animate-4 { animation-delay: 0.35s; }
+
+/* ---- Gradient text helper ---- */
+.ar-gradient-text {
+  background: linear-gradient(90deg, var(--ar-violet), var(--ar-pink) 50%, var(--ar-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Google sign-in row ---- */
+.ar-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+  color: #9aa3b2;
+  font-size: 13px;
+}
+.ar-divider::before, .ar-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(0,0,0,0.1);
+}
+.ar-google-btn-wrap { display: flex; justify-content: center; }
+
+/* ---- Mobile / small-screen pass ----
+   Applies site-wide so individual pages don't need to repeat the same
+   breakpoint rules. Most layout already comes from Bootstrap's grid
+   (col-md-*), so this mainly tightens spacing and fixes rows that don't
+   wrap by default. */
+@media (max-width: 600px) {
+  .navbar { padding-top: 8px; padding-bottom: 8px; }
+  .navbar .container { flex-wrap: wrap; gap: 8px; }
+  .navbar-brand { font-size: 1rem; }
+  .navbar-brand img { height: 28px !important; }
+
+  main { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+  .card, .auth-card { padding: 1rem !important; }
+
+  h1, .display-1, .display-2, .display-3, .display-4 { font-size: 1.7rem !important; }
+  h2 { font-size: 1.35rem !important; }
+
+  /* Any header row pairing a title with an action button should stack
+     instead of clipping/overlapping on narrow screens. */
+  .d-flex.justify-content-between {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .btn { font-size: 14px; padding: 8px 14px; }
+
+  /* Landing page hero - too tall on phones at desktop padding */
+  .hero { padding: 50px 0 40px !important; }
+}
+
+@media (max-width: 480px) {
+  /* Logged-in navbar user block - keep avatar + menu, drop name/email text
+     so it doesn't collide with the logo on narrow screens */
+  .user-name-block { display: none !important; }
+}
+
+@media (max-width: 420px) {
+  .navbar-brand span, .navbar-brand { font-size: 0.95rem; }
+  h1, .display-1, .display-2, .display-3, .display-4 { font-size: 1.4rem !important; }
+}

@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Profile — AI Resume</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
+    <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-white shadow-sm">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="index.html">
+          <img src="/resume_generator/assets/airesume-logo.svg" alt="AI Resume" style="height:34px; margin-right:10px;"/>
+          <span class="fw-bold">AI Resume</span>
+        </a>
+        <div>
+          <a href="index.html" class="btn btn-link">Home</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="py-5">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-md-8 ar-animate">
+            <div class="card shadow-sm">
+              <div class="card-body p-4">
+                <h3 class="mb-3 ar-gradient-text fw-bold">Your profile</h3>
+                <p class="text-muted small">Update your personal details. Email is used for login.</p>
+
+                <form id="profile-form">
+                  <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <input id="name" class="form-control" required />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input id="email" type="email" class="form-control" required />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Phone</label>
+                    <input id="phone" class="form-control" />
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center">
+                    <a id="cancel" class="btn btn-link" href="index.html">Cancel</a>
+                    <button id="save" type="submit" class="btn btn-primary">Save changes</button>
+                  </div>
+                </form>
+
+                  <hr />
+                  <h5 class="mt-3">Reset password</h5>
+                  <p class="text-muted small">Change your password. You must enter your current password.</p>
+                  <form id="password-form">
+                    <div class="mb-3">
+                      <label class="form-label">Current password</label>
+                      <input id="current_password" type="password" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">New password</label>
+                      <input id="new_password" type="password" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Confirm new password</label>
+                      <input id="confirm_password" type="password" class="form-control" required />
+                    </div>
+                    <div class="text-end">
+                      <button id="change-pass" class="btn btn-warning">Change password</button>
+                    </div>
+                  </form>
+
+                <div id="msg" class="mt-3" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="/resume_generator/assets/app-config.js"></script>
+    <script>
+      const API_BASE = window.AR_resolveApiBase();
+
+      // read token payload from localStorage
+      function getPayload(){
+        const token = localStorage.getItem('rg_token');
+        if (!token) return null;
+        try{
+          const parts = token.split('.');
+          if (parts.length !== 3) return null;
+          const payload = JSON.parse(atob(parts[1]));
+          return payload;
+        }catch(e){ return null; }
+      }
+
+      const payload = getPayload();
+      if (!payload){
+        window.location.href = 'login.html';
+      }
+
+      // populate form
+      document.getElementById('name').value = payload.name || '';
+      document.getElementById('email').value = payload.email || '';
+      // attempt to fetch phone from server (optional)
+      (function(){
+        fetch(API_BASE + '/users.php?user_id=' + encodeURIComponent(payload.user_id))
+        .then(r=>r.json()).then(data=>{
+          if (data && data.user && data.user.phone) document.getElementById('phone').value = data.user.phone;
+        }).catch(()=>{});
+      })();
+
+      document.getElementById('profile-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const msg = document.getElementById('msg');
+        msg.textContent = '';
+
+        // call API to update user (PUT)
+        fetch(API_BASE + '/users.php', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('rg_token') },
+          body: JSON.stringify({ user_id: payload.user_id, name, email, phone })
+        }).then(async r=>{
+          let json = null;
+          try{ json = await r.json(); }catch(e){ /* no json */ }
+          if (r.ok && json && json.ok) {
+            msg.innerHTML = '<div class="alert alert-success">Profile updated.</div>';
+          } else {
+            console.error('Profile update failed', r.status, json);
+            let errMsg = 'Error updating profile.';
+            if (json && json.error) errMsg = json.error + (json.message ? (': ' + json.message) : '');
+            else if (json && json.message) errMsg = json.message;
+            else if (r.status) errMsg = 'Server returned status ' + r.status;
+            msg.innerHTML = '<div class="alert alert-danger">' + errMsg + '</div>';
+          }
+        }).catch(err=>{ console.error(err); msg.innerHTML = '<div class="alert alert-danger">Network error.</div>'; });
+      });
+
+      // password change handler
+      document.getElementById('password-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        const current = document.getElementById('current_password').value.trim();
+        const next = document.getElementById('new_password').value.trim();
+        const conf = document.getElementById('confirm_password').value.trim();
+        const msg = document.getElementById('msg');
+        if (!current || !next) { msg.innerHTML = '<div class="alert alert-danger">Please fill passwords.</div>'; return; }
+        if (next !== conf) { msg.innerHTML = '<div class="alert alert-danger">New password and confirm do not match.</div>'; return; }
+
+        fetch(API_BASE + '/users.php', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('rg_token') },
+          body: JSON.stringify({ current_password: current, new_password: next })
+        }).then(r=>r.json()).then(res=>{
+          if (res && res.ok) {
+            msg.innerHTML = '<div class="alert alert-success">Password changed successfully.</div>';
+            document.getElementById('password-form').reset();
+          } else if (res && res.error) {
+            msg.innerHTML = '<div class="alert alert-danger">' + res.error + '</div>';
+          } else {
+            msg.innerHTML = '<div class="alert alert-danger">Unexpected error.</div>';
+          }
+        }).catch(()=>{ msg.innerHTML = '<div class="alert alert-danger">Network error.</div>'; });
+      });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/resume_generator/assets/three-bg.js"></script>
+  </body>
+</html>
