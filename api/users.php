@@ -55,24 +55,14 @@ if ($method === 'POST') {
 // Update / change user (PUT)
 if ($method === 'PUT') {
     $data = json_decode(file_get_contents('php://input'), true);
-    // require authorization header
-    // retrieve Authorization header robustly (getallheaders may not exist under some sapi)
-    $auth = null;
-    if (function_exists('getallheaders')) {
-        $headers = getallheaders();
-        $auth = $headers['Authorization'] ?? ($headers['authorization'] ?? null);
-    }
-    if (!$auth) {
-        // fallback to server vars
-        if (!empty($_SERVER['HTTP_AUTHORIZATION'])) $auth = $_SERVER['HTTP_AUTHORIZATION'];
-        elseif (!empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
-    }
-    if (!$auth || !preg_match('/Bearer\s+(.*)$/i', $auth, $m)) {
+    // require authorization — uses get_bearer_token() which also checks
+    // X-Auth-Token (InfinityFree Apache strips the Authorization header)
+    $token = get_bearer_token();
+    if (!$token) {
         http_response_code(401);
         echo json_encode(['error' => 'Missing Authorization token']);
         exit;
     }
-    $token = $m[1];
     $payload = verify_token($token);
     if (!$payload) { http_response_code(401); echo json_encode(['error'=>'Invalid token']); exit; }
 

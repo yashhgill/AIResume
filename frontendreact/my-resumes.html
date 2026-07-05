@@ -1,135 +1,438 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>My Resumes — AI Resume</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
-    <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml" />
-    <style>
-      .card-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px }
-      @media(max-width:1000px){ .card-grid{ grid-template-columns:repeat(2,1fr);} }
-      @media(max-width:640px){ .card-grid{ grid-template-columns:repeat(1,1fr);} }
-      .resume-card{ border-radius:12px; overflow:hidden; box-shadow:0 12px 40px rgba(10,20,40,0.06); background:#fff; border:1px solid rgba(0,0,0,0.03) }
-      .resume-thumb{ height:180px; display:flex;align-items:center;justify-content:center;background:#fbfdff; position:relative; overflow:hidden }
-      .resume-thumb iframe{ 
-        border:none; 
-        pointer-events:none; 
-        transform:scale(0.2); 
-        transform-origin:top left; 
-        width:500%; 
-        height:500%;
-        position:absolute;
-        top:0;
-        left:0;
-      }
-    </style>
-  </head>
-  <body>
-    <nav class="navbar navbar-light bg-white shadow-sm">
-      <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="index.html">
-          <img src="/resume_generator/assets/airesume-logo.svg" alt="AI Resume" style="height:36px; margin-right:10px;"/>
-          <span class="fw-bold">AI Resume</span>
-        </a>
-        <div>
-          <button id="btn-back" class="btn btn-outline-secondary">Back</button>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>My Dashboard — AI Resume</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
+  <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml"/>
+  <script src="/resume_generator/assets/app-config.js"></script>
+  <style>
+    body { background:#f0f4ff; font-family:'Sora',sans-serif; }
+
+    /* ── Profile Banner ── */
+    .profile-banner {
+      background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+      color: #fff; padding: 28px 0;
+    }
+    .score-svg { width:80px; height:80px; flex-shrink:0; }
+    .score-track { fill:none; stroke:rgba(255,255,255,.25); stroke-width:7; }
+    .score-fill  { fill:none; stroke:#fff; stroke-width:7; stroke-linecap:round;
+                   stroke-dasharray:220; stroke-dashoffset:220; transition:stroke-dashoffset 1.2s ease; transform:rotate(-90deg); transform-origin:50% 50%; }
+    .score-text  { fill:#fff; font-size:18px; font-weight:800; font-family:'Sora',sans-serif; dominant-baseline:middle; text-anchor:middle; }
+    .score-sub   { fill:rgba(255,255,255,.75); font-size:9px; font-family:'Sora',sans-serif; dominant-baseline:middle; text-anchor:middle; }
+    .profile-stat { background:rgba(255,255,255,.15); border-radius:10px; padding:8px 16px; font-size:13px; display:inline-block; }
+    .profile-stat strong { display:block; font-size:18px; font-weight:800; }
+
+    /* ── Layout ── */
+    .dash-grid { display:grid; grid-template-columns:1fr 380px; gap:24px; align-items:start; }
+    @media(max-width:1100px){ .dash-grid{ grid-template-columns:1fr; } }
+
+    /* ── Resume cards ── */
+    .resume-card { background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.07); border:1px solid #f1f5f9; transition:transform .2s,box-shadow .2s; }
+    .resume-card:hover { transform:translateY(-3px); box-shadow:0 8px 32px rgba(0,0,0,.12); }
+    .resume-thumb { height:160px; background:#f8fafc; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; border-bottom:1px solid #f1f5f9; }
+    .resume-thumb iframe { border:none; pointer-events:none; transform:scale(0.2); transform-origin:top left; width:500%; height:500%; position:absolute; top:0; left:0; }
+    .resume-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
+
+    /* ── Career Insights panel ── */
+    .insights-panel { background:#fff; border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,.07); overflow:hidden; position:sticky; top:20px; }
+    .insights-header { background:linear-gradient(135deg,#7c3aed,#db2777); color:#fff; padding:16px 20px; }
+    .insights-body { padding:18px 20px; max-height:calc(100vh - 120px); overflow-y:auto; }
+
+    .job-card { border:1.5px solid #f1f5f9; border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border-color .2s; }
+    .job-card:hover { border-color:#c4b5fd; }
+    .match-bar-wrap { background:#f1f5f9; border-radius:999px; height:6px; margin-top:6px; }
+    .match-bar { height:6px; border-radius:999px; background:linear-gradient(90deg,#7c3aed,#db2777); transition:width 1s ease; width:0; }
+    .miss-chip { display:inline-block; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; border-radius:999px; font-size:11px; padding:2px 8px; margin:2px; }
+
+    .cert-card { background:#f5f3ff; border-radius:9px; padding:10px 13px; margin-bottom:8px; }
+    .cert-title { font-weight:700; color:#7c3aed; font-size:13px; }
+    .cert-reason { color:#4b5563; font-size:12px; margin-top:2px; }
+
+    .section-label { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.6px; margin:16px 0 10px; }
+    .plo-chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; margin:2px; cursor:default; }
+
+    .spinner-sm { width:16px; height:16px; border:2px solid rgba(124,58,237,.2); border-top-color:#7c3aed; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .empty-state { text-align:center; padding:40px 20px; color:#94a3b8; }
+    .empty-state .big { font-size:2.5rem; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-light bg-white shadow-sm">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand d-flex align-items-center" href="index.html">
+      <img src="/resume_generator/assets/airesume-logo.svg" alt="AI Resume" style="height:34px;margin-right:10px;"/>
+      <span class="fw-bold">AI Resume</span>
+    </a>
+    <div class="d-flex align-items-center gap-3">
+      <a href="onboard/start.html" class="btn btn-sm btn-outline-primary">Update Profile</a>
+      <span id="nav-name" class="text-muted small"></span>
+    </div>
+  </div>
+</nav>
+
+<!-- Profile Banner -->
+<div class="profile-banner">
+  <div class="container-fluid px-4">
+    <div class="d-flex align-items-center gap-4 flex-wrap">
+      <!-- Score ring -->
+      <svg class="score-svg" viewBox="0 0 80 80">
+        <circle class="score-track" cx="40" cy="40" r="35"/>
+        <circle class="score-fill" id="score-circle" cx="40" cy="40" r="35"/>
+        <text class="score-text" x="40" y="38" id="score-num">—</text>
+        <text class="score-sub"  x="40" y="52">score</text>
+      </svg>
+      <!-- Name + stats -->
+      <div class="flex-grow-1">
+        <h4 id="banner-name" class="fw-bold mb-1" style="color:#fff">Loading…</h4>
+        <div id="banner-course" class="mb-3" style="color:rgba(255,255,255,.8);font-size:14px"></div>
+        <div class="d-flex gap-3 flex-wrap">
+          <div class="profile-stat"><strong id="stat-resumes">—</strong>Resumes</div>
+          <div class="profile-stat"><strong id="stat-skills">—</strong>Skills</div>
+          <div class="profile-stat"><strong id="stat-subjects">—</strong>Subjects</div>
         </div>
       </div>
-    </nav>
+      <div>
+        <button onclick="window.location.href='onboard/templates.html'" class="btn fw-bold" style="background:#fff;color:#7c3aed;border:none;padding:10px 22px;border-radius:10px;">
+          + Create Resume
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <main class="py-5">
-      <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4 ar-animate">
-          <div>
-            <h2 class="mb-0 ar-gradient-text fw-bold">My Resumes</h2>
-            <div class="text-muted small">Resume history generated by AI</div>
-          </div>
-          <div>
-            <button id="btn-new" class="btn btn-primary">Create new</button>
-          </div>
+<!-- Main content -->
+<div class="container-fluid px-4 py-4">
+  <div class="dash-grid">
+
+    <!-- LEFT: Resumes -->
+    <div>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="fw-bold" style="font-size:1.1rem">My Resumes</div>
+        <button onclick="window.location.href='onboard/templates.html'" class="btn btn-sm btn-primary">+ New Resume</button>
+      </div>
+      <div id="resumes-area">
+        <div class="text-center text-muted py-4"><div class="spinner-sm me-2"></div>Loading resumes…</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Career Insights -->
+    <div class="insights-panel">
+      <div class="insights-header">
+        <div class="fw-bold" style="font-size:15px">🎯 Career Insights</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">AI-powered based on your skills & subjects</div>
+      </div>
+      <div class="insights-body">
+        <div id="insights-loading" class="text-center py-4" style="color:#7c3aed">
+          <div class="spinner-sm mb-2"></div><br>
+          <span style="font-size:13px">Analysing your profile…</span>
         </div>
-
-        <div id="list-area">
-          <div class="text-center text-muted">Loading…</div>
+        <div id="insights-no-profile" style="display:none" class="empty-state">
+          <div class="big">📋</div>
+          <div class="fw-semibold mb-2">No profile data yet</div>
+          <div style="font-size:13px" class="mb-3">Complete the wizard to get job matches and cert recommendations.</div>
+          <a href="onboard/start.html" class="btn btn-sm btn-primary">Build Profile →</a>
+        </div>
+        <div id="insights-content" style="display:none">
+          <div class="section-label">Best-fit job roles</div>
+          <div id="ci-jobs"></div>
+          <div class="section-label">Recommended certifications</div>
+          <div id="ci-certs"></div>
+          <div id="ci-plo-section" style="display:none">
+            <div class="section-label">Programme Outcome Coverage</div>
+            <div id="ci-plo"></div>
+          </div>
+          <div class="mt-3 text-end">
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadInsights(true)">↻ Refresh</button>
+          </div>
         </div>
       </div>
-    </main>
+    </div>
 
-    <script src="/resume_generator/assets/app-config.js"></script>
-    <script>
-      const API_BASE = window.AR_resolveApiBase();
+  </div>
+</div>
 
-      // decode token payload helper
-      function getTokenPayload(){
-        const token = localStorage.getItem('rg_token');
-        if (!token) return null;
-        try{ const p = token.split('.')[1]; return JSON.parse(atob(p)); }catch(e){return null}
-      }
+<script>
+const API = window.AR_resolveApiBase();
+const token = localStorage.getItem('rg_token');
+let userId = null, userPayload = null;
 
-      document.getElementById('btn-back').addEventListener('click', ()=> window.location.href='index.html');
-      document.getElementById('btn-new').addEventListener('click', ()=> window.location.href='onboard/templates.html');
+// ── Auth ──────────────────────────────────────────────────────────
+(function() {
+  if (!token) { window.location.href = 'login.html'; return; }
+  try { userPayload = JSON.parse(atob(token.split('.')[1])); userId = userPayload.user_id; }
+  catch(e) { window.location.href = 'login.html'; return; }
+  document.getElementById('nav-name').textContent = userPayload.name || userPayload.email || '';
+  document.getElementById('banner-name').textContent = 'Welcome back, ' + (userPayload.name || 'there') + '!';
+})();
 
-      (async function(){
-        const payload = getTokenPayload();
-        if (!payload || !payload.user_id){
-          // not logged in
-          document.getElementById('list-area').innerHTML = `<div class="alert alert-warning">Please <a href="login.html">login</a> to view your resumes.</div>`;
-          return;
-        }
-        const userId = payload.user_id;
-        const area = document.getElementById('list-area');
-        area.innerHTML = '<div class="text-center text-muted">Loading…</div>';
-        try{
-          const res = await fetch(API_BASE + '/resumes.php?user_id='+encodeURIComponent(userId));
-          if (!res.ok){ area.innerHTML = '<div class="alert alert-danger">Failed to load resumes.</div>'; return; }
-          const list = await res.json();
-          if (!Array.isArray(list) || list.length===0){ area.innerHTML = '<div class="alert alert-info">You have no resumes yet. Click "Create new" to start.</div>'; return; }
+// Send X-Auth-Token alongside Authorization — InfinityFree Apache strips the
+// Authorization header, but plain custom headers pass through unmodified.
+function authH() {
+  return { 'Authorization': 'Bearer ' + token, 'X-Auth-Token': token, 'Content-Type': 'application/json' };
+}
 
-          const grid = document.createElement('div'); grid.className = 'card-grid';
-          list.forEach(r=>{
-            const card = document.createElement('div'); card.className = 'resume-card p-3';
-            // Use iframe to show resume preview if resume_id exists, otherwise fallback to SVG
-            const previewHtml = r.resume_id
-              ? `<iframe src="${API_BASE}/view_resume.php?id=${r.resume_id}&preview=1"></iframe>`
-              : `<img src="/resume_generator/assets/airesume-logo.svg" style="max-width:100%; max-height:100%;"/>`;
-            card.innerHTML = `
-              <div class="resume-thumb">${previewHtml}</div>
-              <div style="padding:12px">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div>
-                    <div style="font-weight:700">${r.field || 'Resume'}</div>
-                    <div class="text-muted small">Created: ${r.created_at || r.created || ''}</div>
-                  </div>
-                </div>
-                <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-                  ${r.resume_id? '<div class="btn-group"><a class="btn btn-outline-secondary btn-sm" href="'+API_BASE+'/view_resume.php?id='+r.resume_id+'" target="_blank">View</a><a class="btn btn-outline-primary btn-sm" href="'+API_BASE+'/view_resume.php?id='+r.resume_id+'&autoedit=1">Edit</a><a class="btn btn-outline-primary btn-sm" href="'+API_BASE+'/view_resume.php?id='+r.resume_id+'&autodownload=1" target="_blank">Download</a></div>' : ''}
-                  <button class="btn btn-danger btn-sm btn-delete">Delete</button>
-                </div>
-              </div>
-            `;
+// ── Check token expiry client-side before any API calls ───────────
+(function checkExpiry(){
+  try {
+    const p = JSON.parse(atob(token.split('.')[1]));
+    if (p.exp && Date.now()/1000 > p.exp) {
+      localStorage.removeItem('rg_token');
+      window.location.href = 'login.html?expired=1';
+    }
+  } catch(e){}
+})();
 
-            // delete handler
-            card.querySelector('.btn-delete').addEventListener('click', async ()=>{
-              if (!confirm('Delete this resume?')) return;
-              try{
-                const del = await fetch(API_BASE + '/resumes.php?id='+encodeURIComponent(r.resume_id), { method: 'DELETE' });
-                if (del.ok){ card.remove(); } else { alert('Delete failed'); }
-              }catch(e){ alert('Network error'); }
-            });
+// Helper: if any fetch returns 401, the session is expired — redirect to login
+async function authFetch(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    localStorage.removeItem('rg_token');
+    window.location.href = 'login.html?expired=1';
+    throw new Error('Session expired');
+  }
+  return r;
+}
 
-            grid.appendChild(card);
-          });
+// ── Boot ──────────────────────────────────────────────────────────
+if (userId) {
+  loadResumes();
+  loadProfile();
+}
 
-          area.innerHTML = '';
-          area.appendChild(grid);
+// ── Resumes ───────────────────────────────────────────────────────
+async function loadResumes() {
+  const area = document.getElementById('resumes-area');
+  try {
+    const r = await fetch(API + '/resumes.php?user_id=' + encodeURIComponent(userId));
+    const list = r.ok ? await r.json() : [];
+    document.getElementById('stat-resumes').textContent = Array.isArray(list) ? list.length : 0;
 
-        }catch(e){ console.error(e); document.getElementById('list-area').innerHTML = '<div class="alert alert-danger">Error loading resumes.</div>'; }
-      })();
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="/resume_generator/assets/three-bg.js"></script>
-  </body>
+    if (!Array.isArray(list) || list.length === 0) {
+      area.innerHTML = `
+        <div class="empty-state">
+          <div class="big">📄</div>
+          <div class="fw-semibold mb-2">No resumes yet</div>
+          <div style="font-size:13px" class="mb-3">Generate your first AI resume in under a minute.</div>
+          <a href="onboard/start.html" class="btn btn-primary">Build Profile & Generate →</a>
+        </div>`;
+      return;
+    }
+
+    const grid = document.createElement('div'); grid.className = 'cards-grid';
+    list.forEach(resume => {
+      const card = document.createElement('div'); card.className = 'resume-card';
+      const preview = resume.resume_id
+        ? `<iframe src="${API}/view_resume.php?id=${encodeURIComponent(resume.resume_id)}&preview=1" loading="lazy"></iframe>`
+        : `<img src="/resume_generator/assets/airesume-logo.svg" style="height:60px;opacity:.3">`;
+      const date = resume.created_at ? resume.created_at.slice(0, 10) : '';
+      card.innerHTML = `
+        <div class="resume-thumb">${preview}</div>
+        <div class="p-3">
+          <div class="fw-bold mb-1" style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(resume.field || 'Resume')}</div>
+          <div class="text-muted mb-2" style="font-size:11px">${date}</div>
+          <div class="resume-actions">
+            ${resume.resume_id ? `
+              <a class="btn btn-sm btn-outline-secondary" href="${API}/view_resume.php?id=${resume.resume_id}" target="_blank">View</a>
+              <a class="btn btn-sm btn-outline-primary" href="${API}/view_resume.php?id=${resume.resume_id}&autoedit=1">Edit</a>
+              <a class="btn btn-sm btn-outline-primary" href="${API}/view_resume.php?id=${resume.resume_id}&autodownload=1" target="_blank">Download</a>
+            ` : ''}
+            <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${resume.resume_id}">Delete</button>
+          </div>
+        </div>`;
+      card.querySelector('.btn-delete').addEventListener('click', async function() {
+        if (!confirm('Delete this resume?')) return;
+        const id = this.dataset.id;
+        const del = await fetch(API + '/resumes.php?id=' + encodeURIComponent(id), { method: 'DELETE' });
+        if (del.ok) { card.remove(); updateStatCount('stat-resumes', -1); }
+        else alert('Delete failed.');
+      });
+      grid.appendChild(card);
+    });
+    area.innerHTML = '';
+    area.appendChild(grid);
+  } catch(e) {
+    area.innerHTML = '<div class="alert alert-danger">Could not load resumes.</div>';
+  }
+}
+
+function updateStatCount(id, delta) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = Math.max(0, (parseInt(el.textContent) || 0) + delta);
+}
+
+// ── Profile (education + skills + subjects) ───────────────────────
+async function loadProfile() {
+  // Fetch in parallel — authFetch redirects to login on 401
+  const [eduRes, skillRes, subjRes] = await Promise.allSettled([
+    authFetch(API + '/user_education.php',  { headers: authH() }),
+    authFetch(API + '/user_skills.php',     { headers: authH() }),
+    authFetch(API + '/user_subjects.php',   { headers: authH() }),
+  ]);
+
+  const edu    = eduRes.status    === 'fulfilled' && eduRes.value.ok    ? await eduRes.value.json()    : [];
+  const skills = skillRes.status  === 'fulfilled' && skillRes.value.ok  ? await skillRes.value.json()  : [];
+  const subjs  = subjRes.status   === 'fulfilled' && subjRes.value.ok   ? await subjRes.value.json()   : [];
+
+  // Stats
+  document.getElementById('stat-skills').textContent   = Array.isArray(skills) ? skills.length : 0;
+  document.getElementById('stat-subjects').textContent = Array.isArray(subjs)  ? subjs.length  : 0;
+
+  // Banner course
+  if (Array.isArray(edu) && edu.length) {
+    const e = edu[0];
+    const line = [e.course_name || e.course, e.institution_name || e.institution].filter(Boolean).join(' · ');
+    document.getElementById('banner-course').textContent = line;
+  }
+
+  // Load career insights if we have skills/subjects
+  const hasProfile = (Array.isArray(skills) && skills.length > 0) || (Array.isArray(subjs) && subjs.length > 0);
+  if (hasProfile) {
+    loadInsights(false, skills, subjs, edu);
+  } else {
+    document.getElementById('insights-loading').style.display = 'none';
+    document.getElementById('insights-no-profile').style.display = 'block';
+  }
+}
+
+// ── Career Insights ───────────────────────────────────────────────
+async function loadInsights(forceRefresh = false, skills, subjs, edu) {
+  document.getElementById('insights-loading').style.display = 'block';
+  document.getElementById('insights-content').style.display = 'none';
+  document.getElementById('insights-no-profile').style.display = 'none';
+
+  // If refreshing without passed data, fetch fresh
+  if (forceRefresh || !skills) {
+    const [sr, subjr, er] = await Promise.allSettled([
+      authFetch(API + '/user_skills.php',   { headers: authH() }),
+      authFetch(API + '/user_subjects.php', { headers: authH() }),
+      authFetch(API + '/user_education.php',{ headers: authH() }),
+    ]);
+    skills = sr.status   === 'fulfilled' && sr.value.ok   ? await sr.value.json()   : [];
+    subjs  = subjr.status === 'fulfilled' && subjr.value.ok ? await subjr.value.json() : [];
+    edu    = er.status   === 'fulfilled' && er.value.ok   ? await er.value.json()   : [];
+  }
+
+  const skillItems   = Array.isArray(skills) ? skills.map(s => ({ skill_name: s.skill_name, category: s.category, proficiency: s.proficiency })) : [];
+  const subjectIds   = Array.isArray(subjs) ? subjs.map(s => s.subject_id).filter(Boolean) : [];
+  const courseName   = Array.isArray(edu) && edu.length ? (edu[0].course_name || edu[0].course || '') : '';
+  const targetField  = userPayload?.name ? '' : '';
+
+  if (!skillItems.length && !subjectIds.length) {
+    document.getElementById('insights-loading').style.display = 'none';
+    document.getElementById('insights-no-profile').style.display = 'block';
+    return;
+  }
+
+  try {
+    const r = await fetch(API + '/suggest_jobs.php', {
+      method: 'POST', headers: authH(),
+      body: JSON.stringify({ course_name: courseName, field: targetField, skills: skillItems, subject_ids: subjectIds })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    document.getElementById('insights-loading').style.display = 'none';
+    document.getElementById('insights-content').style.display = 'block';
+
+    // Score ring animation
+    const score = d.overall_score ?? 0;
+    document.getElementById('score-num').textContent = score + '%';
+    const circumference = 2 * Math.PI * 35; // ≈ 220
+    const offset = circumference - (score / 100) * circumference;
+    const circle = document.getElementById('score-circle');
+    circle.style.strokeDasharray = circumference;
+    setTimeout(() => { circle.style.strokeDashoffset = offset; }, 100);
+
+    // Jobs
+    const jobsEl = document.getElementById('ci-jobs');
+    jobsEl.innerHTML = '';
+    (d.jobs || []).forEach(j => {
+      const pct = j.match_pct ?? 0;
+      const missing = (j.missing_skills || []).map(s => `<span class="miss-chip">${esc(s)}</span>`).join('');
+      jobsEl.innerHTML += `
+        <div class="job-card">
+          <div class="d-flex justify-content-between">
+            <span class="fw-bold" style="font-size:13px">${esc(j.title)}</span>
+            <span style="color:#7c3aed;font-weight:700;font-size:12px">${pct}%</span>
+          </div>
+          <div class="match-bar-wrap"><div class="match-bar" data-pct="${pct}"></div></div>
+          ${missing ? `<div class="mt-1" style="font-size:11px;color:#6b7280">Gap: ${missing}</div>` : ''}
+        </div>`;
+    });
+    // Animate bars
+    setTimeout(() => {
+      jobsEl.querySelectorAll('.match-bar').forEach(b => { b.style.width = b.dataset.pct + '%'; });
+    }, 120);
+    if (!d.jobs || !d.jobs.length) jobsEl.innerHTML = '<p class="text-muted small">No matches found.</p>';
+
+    // Certs
+    const certsEl = document.getElementById('ci-certs');
+    certsEl.innerHTML = '';
+    (d.certifications || []).forEach(c => {
+      certsEl.innerHTML += `
+        <div class="cert-card">
+          <div class="cert-title">${esc(c.name)}</div>
+          <div class="cert-reason">${esc(c.reason)}</div>
+          ${c.url ? `<a href="${esc(c.url)}" target="_blank" style="font-size:11px;color:#7c3aed;text-decoration:none;font-weight:600">Learn more →</a>` : ''}
+        </div>`;
+    });
+    if (!d.certifications || !d.certifications.length) certsEl.innerHTML = '<p class="text-muted small">No recommendations.</p>';
+
+    // PLO Coverage
+    const ploSection = document.getElementById('ci-plo-section');
+    const ploEl      = document.getElementById('ci-plo');
+    if (d.plo_coverage && d.plo_coverage.length) {
+      ploSection.style.display = 'block';
+      ploEl.innerHTML = '';
+      d.plo_coverage.forEach(c => {
+        const pct   = c.coverage_pct ?? 0;
+        const color = pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626';
+        const chips = (c.plos || []).map(p => {
+          const bg  = p.covered ? '#dcfce7' : '#f3f4f6';
+          const col = p.covered ? '#166534' : '#9ca3af';
+          const brd = p.covered ? '#bbf7d0' : '#e5e7eb';
+          return `<span class="plo-chip" title="${esc(p.description)}"
+                    style="background:${bg};color:${col};border:1px solid ${brd}">${esc(p.code)}</span>`;
+        }).join('');
+        ploEl.innerHTML += `
+          <div style="border:1.5px solid #f1f5f9;border-radius:10px;padding:12px 14px;margin-bottom:10px">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold" style="font-size:13px">${esc(c.course_name)}</span>
+              <span style="color:${color};font-weight:700;font-size:13px">${pct}%</span>
+            </div>
+            <div style="background:#f1f5f9;border-radius:999px;height:6px;margin-bottom:8px">
+              <div style="height:6px;border-radius:999px;background:${color};width:${pct}%;transition:width 1s ease"></div>
+            </div>
+            <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${c.covered_plos} of ${c.total_plos} programme outcomes covered</div>
+            ${chips ? `<div style="margin-top:4px">${chips}</div>` : ''}
+          </div>`;
+      });
+    } else {
+      ploSection.style.display = 'none';
+    }
+
+  } catch(err) {
+    document.getElementById('insights-loading').innerHTML =
+      `<div class="text-muted small p-3">⚠ Could not load insights (${err.message}). <a href="#" onclick="loadInsights(true);return false">Retry</a></div>`;
+  }
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/resume_generator/assets/three-bg.js"></script>
+</body>
 </html>

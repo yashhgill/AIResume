@@ -25,12 +25,14 @@
       <div class="ar-divider">or register with email</div>
 
       <form id="regForm">
-        <div class="mb-2"><input id="name" class="form-control" placeholder="name"/></div>
-        <div class="mb-2"><input id="email" class="form-control" placeholder="email"/></div>
-        <div class="mb-2"><input id="phone" class="form-control" placeholder="phone number"/></div>
-        <div class="mb-2"><input id="password" type="password" class="form-control" placeholder="password"/></div>
-        <div class="mb-2"><input id="confirm_password" type="password" class="form-control" placeholder="confirm password"/></div>
-        <div class="mb-2"><button class="btn btn-primary w-100" type="submit">Register</button></div>
+        <div class="mb-2"><input id="name" class="form-control" placeholder="Full name" autocomplete="name"/></div>
+        <div class="mb-2"><input id="email" class="form-control" placeholder="Email" autocomplete="email"/></div>
+        <div class="mb-2"><input id="phone" class="form-control" placeholder="Phone number (optional)"/></div>
+        <div class="mb-2"><input id="password" type="password" class="form-control" placeholder="Password (min 6 characters)" autocomplete="new-password"/></div>
+        <div class="mb-2"><input id="confirm_password" type="password" class="form-control" placeholder="Confirm password" autocomplete="new-password"/></div>
+        <div id="reg-error" class="alert alert-danger py-2" style="display:none;font-size:13px"></div>
+        <div id="reg-success" class="alert alert-success py-2" style="display:none;font-size:13px">Account created! Taking you to setup your profile…</div>
+        <div class="mb-2"><button id="reg-btn" class="btn btn-primary w-100" type="submit">Create Account</button></div>
       </form>
       <p class="text-center">Already have an account? <a href="login.html">Login here</a></p>
     </div>
@@ -39,75 +41,58 @@
     <script src="/resume_generator/assets/three-bg.js"></script>
     <script src="/resume_generator/assets/app-config.js"></script>
     <script>
-      window.AR_renderGoogleButton('google-btn-container', 'index.html');
+      window.AR_renderGoogleButton('google-btn-container', 'onboard/start.html');
 
-      // Use absolute URL to Apache server (port 80) for PHP API
       const API_BASE = window.AR_resolveApiBase();
-      console.log('API_BASE:', API_BASE, 'Protocol:', window.location.protocol, 'Port:', window.location.port);
+      const errEl  = document.getElementById('reg-error');
+      const okEl   = document.getElementById('reg-success');
+      const regBtn = document.getElementById('reg-btn');
+
+      function showErr(msg) { errEl.textContent = msg; errEl.style.display='block'; okEl.style.display='none'; regBtn.disabled=false; regBtn.textContent='Create Account'; }
+
       document.getElementById('regForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = document.getElementById('name').value.trim();
-        const email = document.getElementById('email').value.trim();
+        errEl.style.display = 'none';
+        const name     = document.getElementById('name').value.trim();
+        const email    = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
-        const phone = document.getElementById('phone').value.trim();
-        const confirm = document.getElementById('confirm_password').value;
+        const phone    = document.getElementById('phone').value.trim();
+        const confirm  = document.getElementById('confirm_password').value;
 
-        // Validation
-        if (!name || !email || !password) {
-          alert('Please fill in all required fields (name, email, password)');
-          return;
-        }
+        if (!name || !email || !password) return showErr('Please fill in name, email and password.');
+        if (password !== confirm)         return showErr('Passwords do not match.');
+        if (password.length < 6)          return showErr('Password must be at least 6 characters.');
 
-        if (password !== confirm) {
-          alert('Passwords do not match');
-          return;
-        }
-
-        if (password.length < 6) {
-          alert('Password must be at least 6 characters long');
-          return;
-        }
-
-        // Disable button during submission
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Registering...';
+        regBtn.disabled = true; regBtn.textContent = 'Creating account…';
 
         try {
-          const url = API_BASE + '/users.php';
-          console.log('Fetching URL:', url);
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
+          // 1) Create the account
+          const res  = await fetch(API_BASE + '/users.php', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ name, email, phone: phone || null, password })
           });
-
           const text = await res.text();
           let j;
-          try {
-            j = JSON.parse(text);
-          } catch (parseErr) {
-            console.error('Response not JSON:', text);
-            alert('Server error: Invalid response. Check console for details.');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Register';
-            return;
+          try { j = JSON.parse(text); } catch(pe) { return showErr('Server error — please try again.'); }
+
+          if (!res.ok || !j.user_id) return showErr(j.error || j.message || 'Registration failed.');
+
+          // 2) Auto-login immediately so the user doesn't have to log in again
+          const loginRes = await fetch(API_BASE + '/auth.php', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ action: 'login', email, password })
+          });
+          const loginData = await loginRes.json();
+          if (loginData.token) {
+            localStorage.setItem('rg_token', loginData.token);
           }
 
-          if (res.ok && j.user_id) {
-            alert('Registration successful! Redirecting to login...');
-            window.location = 'login.html';
-          } else {
-            const errorMsg = j.error || j.message || 'Registration failed';
-            alert('Register failed: ' + errorMsg + (j.message ? '\nDetails: ' + j.message : ''));
-            console.error('Registration error:', j);
-          }
+          // 3) Show success and redirect to wizard
+          okEl.style.display = 'block';
+          setTimeout(() => { window.location.href = 'onboard/start.html'; }, 1200);
+
         } catch (err) {
-          console.error('Network error:', err);
-          alert('Network error: Cannot connect to server. Make sure:\n1. XAMPP Apache is running\n2. Database is set up\n3. Check browser console for details');
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Register';
+          showErr('Network error — please check your connection.');
         }
       });
     </script>

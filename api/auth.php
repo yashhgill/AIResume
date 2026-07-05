@@ -28,7 +28,7 @@ if ($method === 'POST') {
             }
             exit;
         }
-        $payload = ['user_id'=>$user['user_id'], 'email'=>$user['email'], 'name'=>$user['name'], 'exp'=>time()+3600];
+        $payload = ['user_id'=>$user['user_id'], 'email'=>$user['email'], 'name'=>$user['name'], 'exp'=>time()+2592000]; // 30 days
         $token = sign_token($payload);
         echo json_encode(['token'=>$token, 'user'=>$payload]);
         exit;

@@ -266,6 +266,8 @@ if (strpos($htmlContent, 'editModeEnabled') === false && !$isPreview) {
                 btnImagesShapes.style.display = \'inline-block\';
                 btnImagesShapes.style.visibility = \'visible\';
             }
+            const btnAIEnhance = document.getElementById(\'btnAIEnhance\');
+            if (btnAIEnhance) btnAIEnhance.style.display = \'inline-block\';
 
             // Update buttons
             const btnEdit = document.getElementById(\'btnEdit\');
@@ -700,6 +702,8 @@ if (strpos($htmlContent, 'editModeEnabled') === false && !$isPreview) {
             if (btnImagesShapes) btnImagesShapes.style.display = \'none\';
             const btnColors = document.getElementById(\'btnColors\');
             if (btnColors) btnColors.style.display = \'none\';
+            const btnAIEnhanceExit = document.getElementById(\'btnAIEnhance\');
+            if (btnAIEnhanceExit) btnAIEnhanceExit.style.display = \'none\';
             if (btnSave) btnSave.style.display = \'none\';
             if (btnCancel) btnCancel.style.display = \'none\';
             if (btnDownloadPDF) btnDownloadPDF.style.display = \'inline-block\';
@@ -807,11 +811,13 @@ if (strpos($htmlContent, 'editModeEnabled') === false && !$isPreview) {
             }
             const btnImagesShapes = document.getElementById(\'btnImagesShapes\');
             if (btnImagesShapes) btnImagesShapes.style.display = \'none\';
+            const btnAIEnhanceInit = document.getElementById(\'btnAIEnhance\');
+            if (btnAIEnhanceInit) btnAIEnhanceInit.style.display = \'none\';
             if (btnSave) btnSave.style.display = \'none\';
             if (btnCancel) btnCancel.style.display = \'none\';
             if (btnDownloadPDF) btnDownloadPDF.style.display = \'inline-block\';
         }
-        
+
         // Run initialization when page loads
         if (document.readyState === \'loading\') {
             document.addEventListener(\'DOMContentLoaded\', initializePage);
@@ -2756,6 +2762,87 @@ if (strpos($htmlContent, 'editModeEnabled') === false && !$isPreview) {
         window.addEventListener(\'load\', function() {
             initializePage();
         });
+
+        // ========== AI ENHANCE ==========
+
+        async function aiEnhanceResume() {
+            const btn = document.getElementById(\'btnAIEnhance\');
+            if (!btn) return;
+
+            // Build clean resume HTML — strip out all editor chrome
+            const bodyClone = document.body.cloneNode(true);
+            [\'resumeControls\', \'colorEditorPanel\', \'imageShapePanel\', \'selectionBox\',
+             \'pageOverflowWarning\', \'addSectionMenu\', \'shapeStylingPanel\', \'imageStylingPanel\',
+             \'cropModal\', \'btnAddSection\'].forEach(function(id) {
+                const el = bodyClone.querySelector(\'#\' + id);
+                if (el) el.remove();
+            });
+            bodyClone.querySelectorAll(\'.section-delete-btn, .no-edit, .resize-handle\').forEach(function(el) { el.remove(); });
+            bodyClone.querySelectorAll(\'[contenteditable]\').forEach(function(el) {
+                el.removeAttribute(\'contenteditable\');
+                el.style.outline = \'\';
+                el.style.minHeight = \'\';
+            });
+
+            const resumeHTML = bodyClone.innerHTML;
+
+            // Disable button and show loading state
+            btn.disabled = true;
+            const origHTML = btn.innerHTML;
+            btn.style.opacity = \'0.7\';
+            btn.innerHTML = \'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>Enhancing…\';
+
+            try {
+                const response = await fetch(\'/resume_generator/api/enhance_resume.php\', {
+                    method: \'POST\',
+                    headers: { \'Content-Type\': \'application/json\' },
+                    body: JSON.stringify({ html: resumeHTML })
+                });
+
+                const result = await response.json();
+
+                if (result.ok && result.improved_html) {
+                    // Detach editor overlay elements before wiping body content
+                    const savedNodes = {};
+                    [\'resumeControls\', \'colorEditorPanel\', \'imageShapePanel\'].forEach(function(id) {
+                        const el = document.getElementById(id);
+                        if (el) savedNodes[id] = el.parentNode.removeChild(el);
+                    });
+
+                    // Replace resume content with AI-improved version
+                    document.body.innerHTML = result.improved_html;
+
+                    // Re-attach editor overlay elements
+                    Object.values(savedNodes).forEach(function(el) {
+                        document.body.appendChild(el);
+                    });
+
+                    // Reset state and re-enter edit mode so user can review changes
+                    editModeEnabled = false;
+                    selectedElement = null;
+                    enterEditMode();
+
+                    // Restore button (it came back with its parent resumeControls)
+                    const newBtn = document.getElementById(\'btnAIEnhance\');
+                    if (newBtn) {
+                        newBtn.disabled = false;
+                        newBtn.innerHTML = origHTML;
+                        newBtn.style.opacity = \'1\';
+                    }
+                } else {
+                    alert(\'AI Enhance failed: \' + (result.error || \'Unknown error\'));
+                    btn.disabled = false;
+                    btn.innerHTML = origHTML;
+                    btn.style.opacity = \'1\';
+                }
+            } catch (err) {
+                console.error(\'aiEnhanceResume error:\', err);
+                alert(\'Could not reach the AI service. Please try again.\');
+                btn.disabled = false;
+                btn.innerHTML = origHTML;
+                btn.style.opacity = \'1\';
+            }
+        }
     </script>';
     
     // Insert before closing </head> tag (only if scripts exist)
@@ -2780,6 +2867,7 @@ if (strpos($htmlContent, 'editModeEnabled') === false && !$isPreview) {
             <button id="btnEdit" onclick="enterEditMode()" style="padding: 10px 20px; background: #ffc107; color: #000; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>
             <button id="btnColors" onclick="toggleColorPanel()" style="display: none; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996C20.516 16.394 22 14.78 22 12.39 22 6.69 17.5 2 12 2z"></path></svg>Colors</button>
             <button id="btnImagesShapes" onclick="toggleImageShapePanel()" style="display: none; padding: 10px 20px; background: #6f42c1; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>Images & Shapes</button>
+            <button id="btnAIEnhance" onclick="aiEnhanceResume()" style="display: none; padding: 10px 20px; background: linear-gradient(135deg, #7c3aed, #db2777); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>AI Enhance</button>
             <button id="btnSave" onclick="saveResume()" style="display: none; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg>Save</button>
             <button id="btnCancel" onclick="cancelEdit()" style="display: none; padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Cancel</button>
             <button id="btnDownloadPDF" onclick="downloadAsPDF()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Download PDF</button>

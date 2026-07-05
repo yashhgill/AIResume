@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin Panel — AI Resume</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
+  <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml"/>
+  <script src="/resume_generator/assets/app-config.js"></script>
+  <style>
+    body { background:#f8fafc; font-family:'Sora',sans-serif; }
+    .sidebar { width:220px; min-height:100vh; background:#1e293b; color:#fff; padding:0; flex-shrink:0; }
+    .sidebar-brand { padding:20px 18px 16px; border-bottom:1px solid rgba(255,255,255,.1); }
+    .sidebar-brand .badge { background:#7c3aed; }
+    .sidebar-nav a { display:block; padding:11px 20px; color:rgba(255,255,255,.75); font-size:14px; font-weight:600; text-decoration:none; border-left:3px solid transparent; }
+    .sidebar-nav a:hover, .sidebar-nav a.active { background:rgba(255,255,255,.08); color:#fff; border-left-color:#7c3aed; }
+    .sidebar-nav .nav-section { font-size:10px; color:rgba(255,255,255,.35); text-transform:uppercase; letter-spacing:.8px; padding:14px 20px 4px; }
+    .main { flex:1; min-width:0; }
+    .topbar { background:#fff; border-bottom:1px solid #e2e8f0; padding:12px 24px; display:flex; justify-content:space-between; align-items:center; }
+    .panel { display:none; } .panel.active { display:block; }
+    .stat-card { background:#fff; border-radius:12px; padding:20px 24px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    .stat-num { font-size:2rem; font-weight:800; color:#1e293b; }
+    .stat-label { font-size:13px; color:#6b7280; margin-top:2px; }
+    .table-action { font-size:13px; cursor:pointer; }
+    .badge-verified { background:#dcfce7; color:#166534; font-size:11px; }
+    .badge-unverified { background:#fef3c7; color:#92400e; font-size:11px; }
+    .badge-admin { background:#f5f3ff; color:#7c3aed; font-size:11px; }
+    .search-input { max-width:260px; font-size:13px; }
+    .empty-state { text-align:center; padding:48px 0; color:#94a3b8; }
+    .spinner-sm { width:16px; height:16px; border:2px solid #ddd; border-top-color:#7c3aed; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .modal-custom { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:9000; }
+    .modal-box { background:#fff; border-radius:12px; padding:24px; width:480px; max-width:95%; box-shadow:0 30px 80px rgba(0,0,0,.3); }
+    .clamp { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .badge-approved { background:#dcfce7; color:#166534; font-size:11px; }
+    .badge-pending  { background:#fef3c7; color:#92400e; font-size:11px; }
+    .badge-rejected { background:#fee2e2; color:#991b1b; font-size:11px; }
+    .plo-ring { width:56px; height:56px; flex-shrink:0; }
+    .report-card { background:#fff; border:1.5px solid #f1f5f9; border-radius:12px; padding:16px; margin-bottom:12px; }
+    .plo-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; margin:2px; }
+  </style>
+</head>
+<body>
+<div id="access-denied" style="display:none" class="d-flex align-items-center justify-content-center min-vh-100">
+  <div class="text-center"><h3 class="fw-bold mb-2">Access Denied</h3><p class="text-muted">You need admin access to view this page.</p><a href="../index.html" class="btn btn-primary">Go Home</a></div>
+</div>
+
+<div id="app" style="display:none" class="d-flex">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="d-flex align-items-center gap-2">
+        <img src="/resume_generator/assets/airesume-logo.svg" style="height:28px" alt="">
+        <span class="fw-bold">Admin</span>
+        <span class="badge ms-1">Panel</span>
+      </div>
+    </div>
+    <div class="sidebar-nav mt-2">
+      <div class="nav-section">Overview</div>
+      <a href="#" class="active" data-panel="dashboard">📊 Dashboard</a>
+      <div class="nav-section">Database</div>
+      <a href="#" data-panel="institutions">🏛 Institutions</a>
+      <a href="#" data-panel="courses">📚 Courses</a>
+      <a href="#" data-panel="subjects">📖 Subjects</a>
+      <div class="nav-section">Faculty</div>
+      <a href="#" data-panel="faculties">🏫 Faculties</a>
+      <a href="#" data-panel="enrolments">📋 Enrolments <span id="nav-pending-badge" class="badge ms-1" style="background:#ef4444;display:none">0</span></a>
+      <a href="#" data-panel="reports">📈 Reports</a>
+      <div class="nav-section">Users</div>
+      <a href="#" data-panel="users">👥 Users</a>
+      <div class="nav-section">Site</div>
+      <a href="../index.html">← Back to site</a>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="topbar">
+      <div id="panel-title" class="fw-bold">Dashboard</div>
+      <div id="topbar-user" class="text-muted small"></div>
+    </div>
+
+    <div class="p-4">
+
+      <!-- DASHBOARD -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="row g-3 mb-4" id="stats-row">
+          <div class="col-6 col-md-2"><div class="stat-card"><div class="stat-num" id="stat-institutions">—</div><div class="stat-label">Institutions</div></div></div>
+          <div class="col-6 col-md-2"><div class="stat-card"><div class="stat-num" id="stat-courses">—</div><div class="stat-label">Courses</div></div></div>
+          <div class="col-6 col-md-2"><div class="stat-card"><div class="stat-num" id="stat-subjects">—</div><div class="stat-label">Subjects</div></div></div>
+          <div class="col-6 col-md-2"><div class="stat-card"><div class="stat-num" id="stat-faculties">—</div><div class="stat-label">Faculties</div></div></div>
+          <div class="col-6 col-md-2"><div class="stat-card"><div class="stat-num" id="stat-pending" style="color:#ef4444">—</div><div class="stat-label">Pending Enrolments</div></div></div>
+          <div class="col-6 col-md-2"><div class="stat-card"><div class="stat-num" id="stat-users">—</div><div class="stat-label">Users</div></div></div>
+        </div>
+        <div class="card border-0 shadow-sm p-4">
+          <h6 class="fw-bold mb-3">Unverified entries need review</h6>
+          <div id="unverified-list" class="text-muted small">Loading…</div>
+        </div>
+      </div>
+
+      <!-- INSTITUTIONS -->
+      <div class="panel" id="panel-institutions">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <input class="form-control search-input" id="inst-search" placeholder="Search institutions…">
+          <button class="btn btn-sm btn-primary ms-2" onclick="openEditModal('institution', null)">+ Add</button>
+        </div>
+        <div class="card border-0 shadow-sm">
+          <table class="table table-hover mb-0" id="inst-table">
+            <thead class="table-light"><tr><th>Name</th><th>Country</th><th>Type</th><th>Courses</th><th>Status</th><th></th></tr></thead>
+            <tbody id="inst-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- COURSES -->
+      <div class="panel" id="panel-courses">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <input class="form-control search-input" id="course-search" placeholder="Search courses…">
+        </div>
+        <div class="card border-0 shadow-sm">
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Course</th><th>Level</th><th>Institution</th><th>Subjects</th><th>Status</th><th></th></tr></thead>
+            <tbody id="course-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SUBJECTS -->
+      <div class="panel" id="panel-subjects">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <input class="form-control search-input" id="subj-search" placeholder="Search subjects…">
+          <div class="ms-2 text-muted small" id="subj-course-filter">All courses</div>
+        </div>
+        <div class="card border-0 shadow-sm">
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Subject</th><th>Code</th><th>Sem</th><th>Course</th><th>CLOs</th><th>Status</th><th></th></tr></thead>
+            <tbody id="subj-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- FACULTIES -->
+      <div class="panel" id="panel-faculties">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <input class="form-control search-input" id="fac-search" placeholder="Search faculties…">
+          <button class="btn btn-sm btn-primary ms-2" onclick="openFacultyModal(null)">+ Add Faculty</button>
+        </div>
+        <div class="card border-0 shadow-sm">
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Faculty Name</th><th>Short</th><th>Institution</th><th>Courses</th><th>Status</th><th></th></tr></thead>
+            <tbody id="fac-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ENROLMENTS -->
+      <div class="panel" id="panel-enrolments">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex gap-2 align-items-center">
+            <select class="form-select form-select-sm" id="enrol-status-filter" style="width:160px">
+              <option value="">All statuses</option>
+              <option value="pending" selected>Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadEnrolments()">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Student</th><th>Email</th><th>Subject</th><th>Course</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+            <tbody id="enrol-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="panel" id="panel-reports">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="fw-semibold" style="font-size:14px">Programme Outcome Coverage by Student</div>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadReports()">↻ Refresh</button>
+        </div>
+        <div id="reports-area">
+          <div class="text-center text-muted py-4"><div class="spinner-sm me-2"></div>Loading…</div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="panel" id="panel-users">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <input class="form-control search-input" id="user-search" placeholder="Search users…">
+        </div>
+        <div class="card border-0 shadow-sm">
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+            <tbody id="user-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Edit/Verify Modal -->
+<div id="edit-modal" class="modal-custom" style="display:none">
+  <div class="modal-box">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 id="modal-title" class="fw-bold mb-0">Edit</h6>
+      <button class="btn btn-sm btn-outline-secondary" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <button class="btn btn-sm btn-outline-danger" id="modal-delete-btn" style="display:none" onclick="modalDelete()">Delete</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-sm btn-primary" onclick="modalSave()">Save</button>
+    </div>
+    <div id="modal-msg" class="mt-2"></div>
+  </div>
+</div>
+
+<script>
+const API = window.AR_resolveApiBase();
+const token = localStorage.getItem('rg_token');
+let adminUserId = null;
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+(async function checkAdmin() {
+  if (!token) { show403(); return; }
+  try {
+    const p = JSON.parse(atob(token.split('.')[1]));
+    adminUserId = p.user_id;
+    document.getElementById('topbar-user').textContent = p.name || p.email || '';
+  } catch(e) { show403(); return; }
+
+  const r = await fetch(API + '/admin.php?resource=stats', { headers: authH() });
+  if (r.status === 401 || r.status === 403) { show403(); return; }
+
+  document.getElementById('app').style.display = 'flex';
+  loadStats();
+  loadInstitutions();
+  loadCourses();
+  loadSubjects();
+  loadUsers();
+  loadFaculties();
+  loadEnrolments();
+  loadReports();
+})();
+
+function show403() { document.getElementById('access-denied').style.display = 'flex'; }
+function authH() { return { 'Authorization': 'Bearer ' + token, 'X-Auth-Token': token, 'Content-Type': 'application/json' }; }
+
+// ── Navigation ────────────────────────────────────────────────────────────
+document.querySelectorAll('.sidebar-nav [data-panel]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.sidebar-nav a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('panel-' + a.dataset.panel);
+    if (panel) panel.classList.add('active');
+    document.getElementById('panel-title').textContent = a.textContent.replace(/[^\w\s]/g,'').trim();
+  });
+});
+
+// ── Dashboard ─────────────────────────────────────────────────────────────
+async function loadStats() {
+  const r = await fetch(API + '/admin.php?resource=stats', { headers: authH() });
+  if (!r.ok) return;
+  const d = await r.json();
+  document.getElementById('stat-institutions').textContent = d.institutions ?? 0;
+  document.getElementById('stat-courses').textContent      = d.courses ?? 0;
+  document.getElementById('stat-subjects').textContent     = d.subjects ?? 0;
+  document.getElementById('stat-users').textContent        = d.users ?? 0;
+  document.getElementById('stat-faculties').textContent    = d.faculties ?? 0;
+  const pending = d.enrolments_pending ?? 0;
+  document.getElementById('stat-pending').textContent = pending;
+  const badge = document.getElementById('nav-pending-badge');
+  if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline'; }
+  else badge.style.display = 'none';
+
+  const ul = document.getElementById('unverified-list');
+  const unv = (d.institutions ?? 0) - (d.institutions_verified ?? 0);
+  ul.innerHTML = unv > 0
+    ? `<span class="text-warning fw-semibold">${unv} unverified institution(s)</span> — go to <a href="#" data-panel="institutions" onclick="document.querySelector('[data-panel=institutions]').click()">Institutions</a> to verify them.`
+    : '<span class="text-success">All institutions verified ✓</span>';
+}
+
+// ── Institutions ──────────────────────────────────────────────────────────
+let institutions = [];
+async function loadInstitutions() {
+  const r = await fetch(API + '/admin.php?resource=institutions', { headers: authH() });
+  if (!r.ok) return;
+  institutions = await r.json();
+  renderInstitutions(institutions);
+}
+
+function renderInstitutions(data) {
+  const tbody = document.getElementById('inst-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No institutions yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(i => `
+    <tr>
+      <td class="clamp fw-semibold" title="${esc(i.name)}">${esc(i.name)}</td>
+      <td>${esc(i.country||'—')}</td>
+      <td>${esc(i.type||'—')}</td>
+      <td>${i.course_count||0}</td>
+      <td><span class="badge ${i.verified ? 'badge-verified' : 'badge-unverified'}">${i.verified ? 'Verified' : 'Unverified'}</span></td>
+      <td class="text-end">
+        <button class="btn btn-xs btn-sm btn-outline-primary table-action me-1" onclick="openEditModal('institution', ${JSON.stringify(JSON.stringify(i))})">Edit</button>
+        ${!i.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action" onclick="verifyItem('institution', ${i.institution_id})">Verify</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('inst-search').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  renderInstitutions(institutions.filter(i => i.name.toLowerCase().includes(q)));
+});
+
+// ── Courses ───────────────────────────────────────────────────────────────
+let courses = [];
+async function loadCourses() {
+  const r = await fetch(API + '/admin.php?resource=courses', { headers: authH() });
+  if (!r.ok) return;
+  courses = await r.json();
+  renderCourses(courses);
+}
+
+function renderCourses(data) {
+  const tbody = document.getElementById('course-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No courses yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(c => `
+    <tr>
+      <td class="clamp fw-semibold" title="${esc(c.name)}">${esc(c.name)}</td>
+      <td>${esc(c.level||'—')}</td>
+      <td class="clamp" title="${esc(c.institution_name)}">${esc(c.institution_name||'—')}</td>
+      <td>${c.subject_count||0}</td>
+      <td><span class="badge ${c.verified ? 'badge-verified' : 'badge-unverified'}">${c.verified ? 'Verified' : 'Unverified'}</span></td>
+      <td class="text-end">
+        <button class="btn btn-xs btn-sm btn-outline-primary table-action me-1" onclick="openEditModal('course', ${JSON.stringify(JSON.stringify(c))})">Edit</button>
+        ${!c.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action" onclick="verifyItem('course', ${c.course_id})">Verify</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('course-search').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  renderCourses(courses.filter(c => c.name.toLowerCase().includes(q) || (c.institution_name||'').toLowerCase().includes(q)));
+});
+
+// ── Subjects ──────────────────────────────────────────────────────────────
+let subjects = [];
+async function loadSubjects() {
+  const r = await fetch(API + '/admin.php?resource=subjects', { headers: authH() });
+  if (!r.ok) return;
+  subjects = await r.json();
+  renderSubjects(subjects);
+}
+
+function renderSubjects(data) {
+  const tbody = document.getElementById('subj-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No subjects yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(s => `
+    <tr>
+      <td class="clamp fw-semibold" title="${esc(s.name)}">${esc(s.name)}</td>
+      <td>${esc(s.code||'—')}</td>
+      <td>${s.semester||'—'}</td>
+      <td class="clamp" title="${esc(s.course_name)}">${esc(s.course_name||'—')}</td>
+      <td>${Array.isArray(s.learning_outcomes) ? s.learning_outcomes.length : 0} CLOs</td>
+      <td><span class="badge ${s.verified ? 'badge-verified' : 'badge-unverified'}">${s.verified ? 'Verified' : 'Unverified'}</span></td>
+      <td class="text-end">
+        <button class="btn btn-xs btn-sm btn-outline-primary table-action me-1" onclick="openEditModal('subject', ${JSON.stringify(JSON.stringify(s))})">Edit</button>
+        ${!s.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action" onclick="verifyItem('subject', ${s.subject_id})">Verify</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('subj-search').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  renderSubjects(subjects.filter(s => s.name.toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q) || (s.course_name||'').toLowerCase().includes(q)));
+});
+
+// ── Users ─────────────────────────────────────────────────────────────────
+let users = [];
+async function loadUsers() {
+  const r = await fetch(API + '/admin.php?resource=users', { headers: authH() });
+  if (!r.ok) return;
+  users = await r.json();
+  renderUsers(users);
+}
+
+function renderUsers(data) {
+  const tbody = document.getElementById('user-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No users.</td></tr>'; return; }
+  tbody.innerHTML = data.map(u => `
+    <tr>
+      <td class="fw-semibold">${esc(u.name||'—')}</td>
+      <td>${esc(u.email)}</td>
+      <td>
+        ${u.is_admin ? '<span class="badge badge-admin">Admin</span>' : '<span class="badge bg-light text-muted border">User</span>'}
+      </td>
+      <td class="text-muted small">${u.created_at ? u.created_at.slice(0,10) : '—'}</td>
+      <td class="text-end">
+        ${u.user_id !== adminUserId
+          ? `<button class="btn btn-xs btn-sm btn-outline-secondary table-action" onclick="toggleAdmin(${u.user_id}, ${u.is_admin?0:1})">${u.is_admin?'Remove admin':'Make admin'}</button>`
+          : '<span class="text-muted small">You</span>'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('user-search').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  renderUsers(users.filter(u => (u.name||'').toLowerCase().includes(q) || u.email.toLowerCase().includes(q)));
+});
+
+async function toggleAdmin(userId, newVal) {
+  if (!confirm(newVal ? 'Grant admin access to this user?' : 'Remove admin access from this user?')) return;
+  const r = await fetch(API + '/admin.php?resource=user&id=' + userId, {
+    method: 'PUT', headers: authH(), body: JSON.stringify({ is_admin: newVal })
+  });
+  if (r.ok) loadUsers();
+  else alert('Failed to update user.');
+}
+
+// ── Verify shortcut ───────────────────────────────────────────────────────
+async function verifyItem(type, id) {
+  const r = await fetch(API + '/admin.php?resource=' + type + '&id=' + id, {
+    method: 'PUT', headers: authH(), body: JSON.stringify({ verified: 1 })
+  });
+  if (r.ok) {
+    if (type === 'institution') { loadInstitutions(); loadStats(); }
+    if (type === 'course')      loadCourses();
+    if (type === 'subject')     loadSubjects();
+  }
+}
+
+// ── Edit Modal ────────────────────────────────────────────────────────────
+let modalState = { type: null, id: null };
+
+function openEditModal(type, itemJson) {
+  const item = itemJson ? JSON.parse(itemJson) : null;
+  modalState = { type, id: item ? (item.institution_id || item.course_id || item.subject_id) : null };
+  document.getElementById('edit-modal').style.display = 'flex';
+  document.getElementById('modal-msg').innerHTML = '';
+  document.getElementById('modal-title').textContent = item ? `Edit ${type}` : `Add ${type}`;
+  document.getElementById('modal-delete-btn').style.display = item ? 'inline-block' : 'none';
+
+  let html = '';
+  if (type === 'institution') {
+    html = `
+      <div class="mb-2"><label class="form-label small fw-semibold">Name</label><input class="form-control form-control-sm" id="m-name" value="${esc(item?.name||'')}"></div>
+      <div class="row g-2 mb-2">
+        <div class="col"><label class="form-label small fw-semibold">Short name</label><input class="form-control form-control-sm" id="m-short" value="${esc(item?.short_name||'')}"></div>
+        <div class="col"><label class="form-label small fw-semibold">Type</label>
+          <select class="form-select form-select-sm" id="m-type">
+            ${['Public University','Private University','Polytechnic','College','Institute','Other'].map(v=>`<option ${(item?.type||'')==v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col"><label class="form-label small fw-semibold">Country</label><input class="form-control form-control-sm" id="m-country" value="${esc(item?.country||'Malaysia')}"></div>
+        <div class="col"><label class="form-label small fw-semibold">City</label><input class="form-control form-control-sm" id="m-city" value="${esc(item?.city||'')}"></div>
+      </div>
+      <div class="form-check"><input type="checkbox" class="form-check-input" id="m-verified" ${item?.verified?'checked':''}><label class="form-check-label small">Verified</label></div>`;
+  } else if (type === 'course') {
+    html = `
+      <div class="mb-2"><label class="form-label small fw-semibold">Name</label><input class="form-control form-control-sm" id="m-name" value="${esc(item?.name||'')}"></div>
+      <div class="row g-2 mb-2">
+        <div class="col"><label class="form-label small fw-semibold">Code</label><input class="form-control form-control-sm" id="m-code" value="${esc(item?.code||'')}"></div>
+        <div class="col"><label class="form-label small fw-semibold">Level</label>
+          <select class="form-select form-select-sm" id="m-level">
+            ${['degree','diploma','masters','phd','certificate','other'].map(v=>`<option ${(item?.level||'')==v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="mb-2"><label class="form-label small fw-semibold">Faculty</label><input class="form-control form-control-sm" id="m-faculty" value="${esc(item?.faculty||'')}"></div>
+      <div class="form-check"><input type="checkbox" class="form-check-input" id="m-verified" ${item?.verified?'checked':''}><label class="form-check-label small">Verified</label></div>`;
+  } else if (type === 'subject') {
+    const los = Array.isArray(item?.learning_outcomes) ? item.learning_outcomes.join('\n') : '';
+    const skills = Array.isArray(item?.skills_inferred) ? item.skills_inferred.join(', ') : '';
+    html = `
+      <div class="row g-2 mb-2">
+        <div class="col-8"><label class="form-label small fw-semibold">Name</label><input class="form-control form-control-sm" id="m-name" value="${esc(item?.name||'')}"></div>
+        <div class="col-4"><label class="form-label small fw-semibold">Code</label><input class="form-control form-control-sm" id="m-code" value="${esc(item?.code||'')}"></div>
+      </div>
+      <div class="mb-2"><label class="form-label small fw-semibold">Semester</label><input type="number" class="form-control form-control-sm" id="m-semester" value="${item?.semester||''}" min="1" max="12"></div>
+      <div class="mb-2"><label class="form-label small fw-semibold">Learning Outcomes <span class="text-muted fw-normal">(one per line)</span></label>
+        <textarea class="form-control form-control-sm" id="m-los" rows="4" placeholder="After this course, students can…">${esc(los)}</textarea>
+      </div>
+      <div class="mb-2"><label class="form-label small fw-semibold">Skills Inferred <span class="text-muted fw-normal">(comma-separated)</span></label>
+        <input class="form-control form-control-sm" id="m-skills" value="${esc(skills)}">
+      </div>
+      <div class="form-check"><input type="checkbox" class="form-check-input" id="m-verified" ${item?.verified?'checked':''}><label class="form-check-label small">Verified</label></div>`;
+  }
+  document.getElementById('modal-body').innerHTML = html;
+}
+
+function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
+
+async function modalSave() {
+  const { type, id } = modalState;
+  const msg = document.getElementById('modal-msg');
+  msg.innerHTML = '';
+  let body = {};
+
+  if (type === 'institution') {
+    body = {
+      name: document.getElementById('m-name').value.trim(),
+      short_name: document.getElementById('m-short').value.trim() || null,
+      type: document.getElementById('m-type').value,
+      country: document.getElementById('m-country').value.trim() || null,
+      city: document.getElementById('m-city').value.trim() || null,
+      verified: document.getElementById('m-verified').checked ? 1 : 0,
+    };
+  } else if (type === 'course') {
+    body = {
+      name: document.getElementById('m-name').value.trim(),
+      code: document.getElementById('m-code').value.trim() || null,
+      level: document.getElementById('m-level').value,
+      faculty: document.getElementById('m-faculty').value.trim() || null,
+      verified: document.getElementById('m-verified').checked ? 1 : 0,
+    };
+  } else if (type === 'subject') {
+    const losRaw = document.getElementById('m-los').value;
+    const losArr = losRaw.split('\n').map(l => l.trim()).filter(Boolean);
+    const skillsRaw = document.getElementById('m-skills').value;
+    const skillsArr = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
+    body = {
+      name: document.getElementById('m-name').value.trim(),
+      code: document.getElementById('m-code').value.trim() || null,
+      semester: parseInt(document.getElementById('m-semester').value) || null,
+      learning_outcomes: losArr,
+      skills_inferred: skillsArr,
+      verified: document.getElementById('m-verified').checked ? 1 : 0,
+    };
+  }
+
+  if (type === 'faculty') {
+    body = {
+      name: document.getElementById('m-name').value.trim(),
+      short_name: document.getElementById('m-short')?.value.trim() || null,
+      description: document.getElementById('m-description')?.value.trim() || null,
+      verified: document.getElementById('m-verified').checked ? 1 : 0,
+    };
+  }
+
+  const url = API + '/admin.php?resource=' + type + (id ? '&id=' + id : '');
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, { method, headers: authH(), body: JSON.stringify(body) });
+  const d = r.ok ? await r.json() : null;
+
+  if (r.ok && d && d.ok) {
+    closeModal();
+    if (type === 'institution') { loadInstitutions(); loadStats(); }
+    if (type === 'course')      loadCourses();
+    if (type === 'subject')     loadSubjects();
+    if (type === 'faculty')     { loadFaculties(); loadStats(); }
+  } else {
+    msg.innerHTML = '<div class="text-danger small">Save failed. ' + (d?.error || '') + '</div>';
+  }
+}
+
+async function modalDelete() {
+  const { type, id } = modalState;
+  if (!id) return;
+  if (!confirm('Delete this ' + type + '? This cannot be undone.')) return;
+  const r = await fetch(API + '/admin.php?resource=' + type + '&id=' + id, { method: 'DELETE', headers: authH() });
+  if (r.ok) {
+    closeModal();
+    if (type === 'institution') { loadInstitutions(); loadStats(); }
+    if (type === 'course')      loadCourses();
+    if (type === 'subject')     loadSubjects();
+    if (type === 'faculty')     { loadFaculties(); loadStats(); }
+  }
+}
+
+// ── Faculties ─────────────────────────────────────────────────────────────
+let faculties = [];
+async function loadFaculties() {
+  const r = await fetch(API + '/admin.php?resource=faculties', { headers: authH() });
+  if (!r.ok) return;
+  faculties = await r.json();
+  renderFaculties(faculties);
+}
+
+function renderFaculties(data) {
+  const tbody = document.getElementById('fac-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No faculties yet. Add one to get started.</td></tr>'; return; }
+  tbody.innerHTML = data.map(f => `
+    <tr>
+      <td class="fw-semibold">${esc(f.name)}</td>
+      <td>${esc(f.short_name||'—')}</td>
+      <td class="clamp" title="${esc(f.institution_name)}">${esc(f.institution_name||'—')}</td>
+      <td>${f.course_count||0}</td>
+      <td><span class="badge ${f.verified ? 'badge-verified' : 'badge-unverified'}">${f.verified ? 'Verified' : 'Draft'}</span></td>
+      <td class="text-end">
+        <button class="btn btn-xs btn-sm btn-outline-primary table-action me-1" onclick='openFacultyModal(${JSON.stringify(JSON.stringify(f))})'>Edit</button>
+        <button class="btn btn-xs btn-sm btn-outline-danger table-action" onclick="deleteFaculty(${f.faculty_id})">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('fac-search')?.addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  renderFaculties(faculties.filter(f => f.name.toLowerCase().includes(q) || (f.short_name||'').toLowerCase().includes(q)));
+});
+
+// Faculty modal (reuses edit-modal)
+function openFacultyModal(itemJson) {
+  const item = itemJson ? JSON.parse(itemJson) : null;
+  modalState = { type: 'faculty', id: item?.faculty_id ?? null };
+  document.getElementById('edit-modal').style.display = 'flex';
+  document.getElementById('modal-msg').innerHTML = '';
+  document.getElementById('modal-title').textContent = item ? 'Edit Faculty' : 'Add Faculty';
+  document.getElementById('modal-delete-btn').style.display = item ? 'inline-block' : 'none';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="mb-2"><label class="form-label small fw-semibold">Faculty Name</label>
+      <input class="form-control form-control-sm" id="m-name" value="${esc(item?.name||'')}"></div>
+    <div class="row g-2 mb-2">
+      <div class="col"><label class="form-label small fw-semibold">Short Name</label>
+        <input class="form-control form-control-sm" id="m-short" value="${esc(item?.short_name||'')}"></div>
+    </div>
+    <div class="mb-2"><label class="form-label small fw-semibold">Description</label>
+      <textarea class="form-control form-control-sm" id="m-description" rows="2">${esc(item?.description||'')}</textarea></div>
+    <div class="form-check"><input type="checkbox" class="form-check-input" id="m-verified" ${item?.verified?'checked':''}>
+      <label class="form-check-label small">Verified / Active</label></div>`;
+}
+
+async function deleteFaculty(id) {
+  if (!confirm('Delete this faculty? Courses linked to it will lose their faculty association.')) return;
+  const r = await fetch(API + '/admin.php?resource=faculty&id=' + id, { method: 'DELETE', headers: authH() });
+  if (r.ok) loadFaculties(); else alert('Delete failed.');
+}
+
+// ── Enrolments ────────────────────────────────────────────────────────────
+let enrolments = [];
+async function loadEnrolments() {
+  const statusFilter = document.getElementById('enrol-status-filter')?.value ?? 'pending';
+  const qs = statusFilter ? '&status=' + encodeURIComponent(statusFilter) : '';
+  const r = await fetch(API + '/admin.php?resource=enrolments' + qs, { headers: authH() });
+  if (!r.ok) return;
+  enrolments = await r.json();
+  renderEnrolments(enrolments);
+}
+
+document.getElementById('enrol-status-filter')?.addEventListener('change', loadEnrolments);
+
+function renderEnrolments(data) {
+  const tbody = document.getElementById('enrol-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No enrolments found.</td></tr>'; return; }
+  tbody.innerHTML = data.map(e => {
+    const statusCls = e.status === 'approved' ? 'badge-approved' : e.status === 'rejected' ? 'badge-rejected' : 'badge-pending';
+    const date = e.approved_at ? e.approved_at.slice(0,10) : '—';
+    const actionBtns = e.status === 'pending'
+      ? `<button class="btn btn-xs btn-sm btn-outline-success table-action me-1" onclick="updateEnrolment(${e.id},'approved')">Approve</button>
+         <button class="btn btn-xs btn-sm btn-outline-danger table-action" onclick="updateEnrolment(${e.id},'rejected')">Reject</button>`
+      : `<button class="btn btn-xs btn-sm btn-outline-secondary table-action" onclick="updateEnrolment(${e.id},'${e.status==='approved'?'rejected':'approved'}')">${e.status==='approved'?'Revoke':'Re-approve'}</button>`;
+    return `
+      <tr>
+        <td class="fw-semibold">${esc(e.user_name||'—')}</td>
+        <td class="text-muted small">${esc(e.user_email)}</td>
+        <td class="clamp" title="${esc(e.subject_name)}">${esc(e.subject_name)} ${e.subject_code?`<span class="text-muted">(${esc(e.subject_code)})</span>`:''}</td>
+        <td class="clamp" title="${esc(e.course_name)}">${esc(e.course_name||'—')}</td>
+        <td><span class="badge ${statusCls}">${e.status}</span></td>
+        <td class="text-muted small">${date}</td>
+        <td class="text-end">${actionBtns}</td>
+      </tr>`;
+  }).join('');
+}
+
+async function updateEnrolment(id, status) {
+  const label = status === 'approved' ? 'approve' : 'reject';
+  if (!confirm(`${label.charAt(0).toUpperCase()+label.slice(1)} this enrolment?`)) return;
+  const r = await fetch(API + '/admin.php?resource=enrolment&id=' + id, {
+    method: 'PUT', headers: authH(), body: JSON.stringify({ status })
+  });
+  if (r.ok) { loadEnrolments(); loadStats(); }
+  else alert('Update failed.');
+}
+
+// ── Reports ───────────────────────────────────────────────────────────────
+async function loadReports() {
+  const area = document.getElementById('reports-area');
+  if (!area) return;
+  area.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-sm me-2"></div>Loading…</div>';
+  const r = await fetch(API + '/admin.php?resource=reports', { headers: authH() });
+  if (!r.ok) { area.innerHTML = '<div class="alert alert-danger">Could not load reports.</div>'; return; }
+  const data = await r.json();
+  if (!data.length) {
+    area.innerHTML = `<div class="empty-state"><div style="font-size:2rem">📊</div>
+      <div class="fw-semibold mt-2">No PLO data yet</div>
+      <div class="text-muted small mt-1">Set up Programme Outcomes on your courses and link subjects to PLOs to see coverage here.</div></div>`;
+    return;
+  }
+  area.innerHTML = data.map(d => {
+    const pct   = d.coverage_pct ?? 0;
+    const color = pct >= 70 ? '#16a34a' : pct >= 40 ? '#d97706' : '#dc2626';
+    const chips = (d.plos || []).map(p => {
+      const bg  = p.covered ? '#dcfce7' : '#f3f4f6';
+      const col = p.covered ? '#166534' : '#9ca3af';
+      const brd = p.covered ? '#bbf7d0' : '#e5e7eb';
+      return `<span class="plo-pill" title="${esc(p.description)}"
+        style="background:${bg};color:${col};border:1px solid ${brd}">${esc(p.code)}</span>`;
+    }).join('');
+    return `
+      <div class="report-card">
+        <div class="d-flex align-items-start gap-3">
+          <svg class="plo-ring" viewBox="0 0 56 56">
+            <circle fill="none" stroke="#f1f5f9" stroke-width="6" cx="28" cy="28" r="22"/>
+            <circle fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"
+              cx="28" cy="28" r="22"
+              stroke-dasharray="${2*Math.PI*22}"
+              stroke-dashoffset="${2*Math.PI*22*(1-pct/100)}"
+              transform="rotate(-90 28 28)"/>
+            <text x="28" y="32" text-anchor="middle" font-size="11" font-weight="800" fill="${color}" font-family="Sora,sans-serif">${pct}%</text>
+          </svg>
+          <div class="flex-grow-1">
+            <div class="fw-bold" style="font-size:14px">${esc(d.user_name||d.email)}</div>
+            <div class="text-muted small mb-1">${esc(d.email)} · ${esc(d.course_name)}</div>
+            <div class="text-muted small mb-2">${d.covered_plos} / ${d.total_plos} outcomes · ${d.subjects_approved} subjects approved</div>
+            ${chips ? `<div>${chips}</div>` : '<div class="text-muted small">No PLO mapping on subjects yet.</div>'}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

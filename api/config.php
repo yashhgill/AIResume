@@ -124,7 +124,7 @@ function send_cors_headers() {
         header('Access-Control-Allow-Origin: *', true);
     }
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS', true);
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With', true);
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Auth-Token', true);
     header('Access-Control-Max-Age: 86400', true); // 24 hours
 }
 
@@ -161,18 +161,33 @@ function verify_token($token) {
 }
 
 // Reads "Authorization: Bearer <token>" from the request, robust across SAPIs.
+// Falls back to X-Auth-Token header (Apache on shared hosts like InfinityFree
+// strips the Authorization header before PHP sees it; X-Auth-Token is a plain
+// custom header that passes through unmodified).
 function get_bearer_token() {
     $auth = null;
+
+    // 1. Standard Authorization header
     if (function_exists('getallheaders')) {
         $headers = getallheaders();
         $auth = $headers['Authorization'] ?? ($headers['authorization'] ?? null);
+        // Also check X-Auth-Token (custom header, never stripped by Apache)
+        if (!$auth) {
+            $auth = isset($headers['X-Auth-Token']) ? 'Bearer ' . $headers['X-Auth-Token']
+                  : (isset($headers['x-auth-token']) ? 'Bearer ' . $headers['x-auth-token'] : null);
+        }
     }
+
+    // 2. $_SERVER fallbacks (populated by .htaccess RewriteRule if mod_rewrite is on)
     if (!$auth) {
-        if (!empty($_SERVER['HTTP_AUTHORIZATION'])) $auth = $_SERVER['HTTP_AUTHORIZATION'];
+        if (!empty($_SERVER['HTTP_AUTHORIZATION']))          $auth = $_SERVER['HTTP_AUTHORIZATION'];
         elseif (!empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        // Custom header fallback via $_SERVER
+        elseif (!empty($_SERVER['HTTP_X_AUTH_TOKEN']))       $auth = 'Bearer ' . $_SERVER['HTTP_X_AUTH_TOKEN'];
     }
+
     if ($auth && preg_match('/Bearer\s+(.*)$/i', $auth, $m)) {
-        return $m[1];
+        return trim($m[1]);
     }
     return null;
 }
@@ -304,6 +319,7 @@ function generate_resume_html_css_with_groq($name, $field, $education = null, $s
     $prompt .= "   - **Contact Information**: Phone, Email, LinkedIn (if provided, format as a single line or compact grid)\n";
     $prompt .= "   - **Professional Summary/Objective**: 2-3 compelling sentences (concise, impactful)\n";
     $prompt .= "   - **Work Experience**: For each role include Job Title, Company Name, Dates (formatted as 'MM/YYYY - MM/YYYY' or 'MMM YYYY - Present'), and 2-3 achievement bullet points per role\n";
+    $prompt .= "   - **Achievements section** (if '[Achievements & Experience Gained]' appears in the experience input): Create a dedicated 'Achievements' section. For each achievement bullet, show the achievement on one line, then a short italicised or indented description line of what was gained/learned from it (1 sentence max). This should feel like: '• Achievement title — Brief description of experience or skills gained.'\n";
     $prompt .= "   - **Education**: Degree, Institution, Graduation Year (if provided)\n";
     $prompt .= "   - **Skills**: Categorized if possible (e.g., Technical Skills, Languages, Certifications), formatted as a clean list or grid\n\n";
     

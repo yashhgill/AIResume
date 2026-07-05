@@ -118,7 +118,7 @@ if (!$user) {
     }
 }
 
-$payload = ['user_id' => $user['user_id'], 'email' => $user['email'], 'name' => $user['name'], 'exp' => time() + 3600];
+$payload = ['user_id' => $user['user_id'], 'email' => $user['email'], 'name' => $user['name'], 'exp' => time() + 2592000]; // 30 days
 $token = sign_token($payload);
 
 http_response_code(200);

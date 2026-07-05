@@ -26,9 +26,10 @@
       <div class="ar-divider">or</div>
 
       <form id="loginForm">
-        <div class="mb-2"><input id="email" class="form-control" placeholder="email"/></div>
-        <div class="mb-2"><input id="password" type="password" class="form-control" placeholder="password"/></div>
-        <div class="mb-2"><button class="btn btn-primary w-100" type="submit">Login</button></div>
+        <div class="mb-2"><input id="email" class="form-control" placeholder="Email" autocomplete="email"/></div>
+        <div class="mb-2"><input id="password" type="password" class="form-control" placeholder="Password" autocomplete="current-password"/></div>
+        <div id="login-error" class="alert alert-danger py-2" style="display:none;font-size:13px"></div>
+        <div class="mb-2"><button id="login-btn" class="btn btn-primary w-100" type="submit">Login</button></div>
       </form>
       <p class="auth-note text-center">Don't have an account? <a href="register.html">Register here</a></p>
     </div>
@@ -37,15 +38,35 @@
     <script src="/resume_generator/assets/three-bg.js"></script>
     <script src="/resume_generator/assets/app-config.js"></script>
     <script>
-      window.AR_renderGoogleButton('google-btn-container', 'index.html');
+      window.AR_renderGoogleButton('google-btn-container', 'my-resumes.html');
 
-      // Use absolute URL to Apache server (port 80) for PHP API
       const API_BASE = window.AR_resolveApiBase();
-      console.log('API_BASE:', API_BASE, 'Protocol:', window.location.protocol, 'Port:', window.location.port);
+      const errEl  = document.getElementById('login-error');
+      const loginBtn = document.getElementById('login-btn');
+
+      // Show session-expired message if redirected here
+      if (new URLSearchParams(window.location.search).get('expired')) {
+        errEl.textContent = 'Your session expired — please log in again.';
+        errEl.style.display = 'block';
+      }
+
+      // If already logged in and token not expired, go straight to dashboard
+      (function(){
+        const t = localStorage.getItem('rg_token');
+        if (!t) return;
+        try {
+          const p = JSON.parse(atob(t.split('.')[1]));
+          if (p.exp && Date.now()/1000 < p.exp) window.location.href = 'my-resumes.html';
+        } catch(e){}
+      })();
+
       document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('email').value;
+        errEl.style.display = 'none';
+        const email    = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
+        if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display='block'; return; }
+        loginBtn.disabled = true; loginBtn.textContent = 'Logging in…';
         try {
           const res = await fetch(API_BASE + '/auth.php', {
             method: 'POST', headers: {'Content-Type':'application/json'},
@@ -54,11 +75,17 @@
           const j = await res.json();
           if (j.token) {
             localStorage.setItem('rg_token', j.token);
-            window.location = 'index.html';
+            window.location.href = 'my-resumes.html';
           } else {
-            alert('Login failed: ' + (j.error || JSON.stringify(j)));
+            errEl.textContent = j.error || 'Login failed. Please check your credentials.';
+            errEl.style.display = 'block';
+            loginBtn.disabled = false; loginBtn.textContent = 'Login';
           }
-        } catch (err) { console.error(err); alert('Error logging in'); }
+        } catch (err) {
+          errEl.textContent = 'Network error — please check your connection.';
+          errEl.style.display = 'block';
+          loginBtn.disabled = false; loginBtn.textContent = 'Login';
+        }
       });
     </script>
   </body>

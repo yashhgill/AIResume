@@ -121,9 +121,10 @@
         msg.textContent = '';
 
         // call API to update user (PUT)
+        const _t1 = localStorage.getItem('rg_token');
         fetch(API_BASE + '/users.php', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('rg_token') },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _t1, 'X-Auth-Token': _t1 },
           body: JSON.stringify({ user_id: payload.user_id, name, email, phone })
         }).then(async r=>{
           let json = null;
@@ -151,9 +152,10 @@
         if (!current || !next) { msg.innerHTML = '<div class="alert alert-danger">Please fill passwords.</div>'; return; }
         if (next !== conf) { msg.innerHTML = '<div class="alert alert-danger">New password and confirm do not match.</div>'; return; }
 
+        const _t2 = localStorage.getItem('rg_token');
         fetch(API_BASE + '/users.php', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('rg_token') },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _t2, 'X-Auth-Token': _t2 },
           body: JSON.stringify({ current_password: current, new_password: next })
         }).then(r=>r.json()).then(res=>{
           if (res && res.ok) {

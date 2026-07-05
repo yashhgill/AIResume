@@ -1,121 +1,1056 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Onboarding — AI Resume</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
-    <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml" />
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body>
-    <nav class="navbar navbar-light bg-white shadow-sm">
-      <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="../index.html">
-          <img src="/resume_generator/assets/airesume-logo.svg" alt="AI Resume" style="height:34px; margin-right:10px;"/>
-          <span class="fw-bold">AI Resume</span>
-        </a>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Build Your Resume — AI Resume</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
+  <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml"/>
+  <script src="/resume_generator/assets/app-config.js"></script>
+  <style>
+    body { background: linear-gradient(135deg,#f0f4ff 0%,#fdf2ff 50%,#eafcff 100%); min-height:100vh; }
+
+    /* ---- progress bar ---- */
+    .wizard-steps { display:flex; gap:0; margin-bottom:32px; }
+    .ws { flex:1; text-align:center; position:relative; }
+    .ws::before { content:''; position:absolute; top:18px; left:50%; width:100%; height:2px; background:#e2e8f0; z-index:0; }
+    .ws:last-child::before { display:none; }
+    .ws-dot { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+              font-weight:700; font-size:14px; position:relative; z-index:1;
+              background:#e2e8f0; color:#94a3b8; transition:all .3s; }
+    .ws.active .ws-dot  { background:linear-gradient(135deg,#7c3aed,#db2777); color:#fff; box-shadow:0 4px 12px rgba(124,58,237,.35); }
+    .ws.done .ws-dot    { background:#10b981; color:#fff; }
+    .ws-label { font-size:11px; color:#94a3b8; margin-top:6px; font-weight:600; }
+    .ws.active .ws-label { color:#7c3aed; }
+    .ws.done .ws-label   { color:#10b981; }
+
+    /* ---- step panels ---- */
+    .step-panel { display:none; animation:stepIn .3s ease; }
+    .step-panel.active { display:block; }
+    @keyframes stepIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ---- autocomplete ---- */
+    .ac-wrap { position:relative; }
+    .ac-dropdown { position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #e2e8f0;
+                   border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.1); z-index:500; max-height:240px; overflow-y:auto; }
+    .ac-item { padding:10px 14px; cursor:pointer; font-size:14px; border-bottom:1px solid #f8fafc; }
+    .ac-item:hover { background:#f0f4ff; }
+    .ac-item.ac-add { color:#7c3aed; font-weight:600; }
+    .ac-item .ac-sub { font-size:11px; color:#94a3b8; margin-top:2px; }
+
+    /* ---- subject chips ---- */
+    .subject-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+    .subject-chip { border:1.5px solid #e2e8f0; border-radius:10px; padding:12px 14px; cursor:pointer;
+                    transition:all .2s; background:#fff; position:relative; }
+    .subject-chip.selected { border-color:#7c3aed; background:#f5f3ff; }
+    .subject-chip.selected .sc-check { opacity:1; }
+    .sc-check { position:absolute; top:8px; right:8px; width:20px; height:20px; border-radius:50%;
+                background:#7c3aed; color:#fff; font-size:11px; display:flex; align-items:center;
+                justify-content:center; opacity:0; transition:opacity .2s; }
+    .subject-chip .sc-name { font-weight:600; font-size:13px; color:#1e293b; }
+    .subject-chip .sc-code { font-size:11px; color:#94a3b8; }
+    .subject-chip .sc-sem  { font-size:11px; color:#7c3aed; margin-top:4px; }
+    .show-toggle { font-size:11px; color:#6b7280; cursor:pointer; display:flex; align-items:center; gap:4px; margin-top:6px; }
+    .show-toggle input { cursor:pointer; }
+
+    /* ---- skill chips ---- */
+    .skill-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
+                   font-size:13px; font-weight:600; border:1.5px solid transparent; cursor:pointer; transition:all .2s; margin:4px; }
+    .skill-badge.selected { background:#f5f3ff; border-color:#7c3aed; color:#7c3aed; }
+    .skill-badge.unselected { background:#f1f5f9; border-color:#e2e8f0; color:#64748b; }
+    .skill-badge .sb-remove { font-size:14px; line-height:1; }
+    .cat-label { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 6px; }
+
+    /* ---- loading ---- */
+    .ai-loading { display:flex; align-items:center; gap:10px; padding:14px; background:#f5f3ff;
+                  border-radius:8px; color:#7c3aed; font-weight:600; font-size:14px; }
+    .spinner-sm { width:18px; height:18px; border:2.5px solid #ddd; border-top-color:#7c3aed;
+                  border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ---- nav buttons ---- */
+    .btn-next { background:linear-gradient(135deg,#7c3aed,#db2777); color:#fff; border:none;
+                padding:12px 32px; border-radius:10px; font-weight:700; font-size:15px; }
+    .btn-next:hover { opacity:.9; color:#fff; }
+    .btn-next:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-back { background:#f1f5f9; color:#475569; border:none; padding:12px 24px; border-radius:10px; font-weight:600; }
+    .btn-back:hover { background:#e2e8f0; color:#1e293b; }
+    .card { border:none; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.07); }
+    /* save status */
+    .save-banner { font-size:12px; padding:7px 12px; border-radius:7px; margin-top:10px; display:none; }
+    .save-banner.ok  { display:block; background:#dcfce7; color:#166534; }
+    .save-banner.err { display:block; background:#fee2e2; color:#991b1b; }
+    /* career insights */
+    #career-panel { display:none; animation:stepIn .3s ease; }
+    .job-card { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+    .match-bar-wrap { background:#f1f5f9; border-radius:999px; height:7px; margin-top:6px; }
+    .match-bar { height:7px; border-radius:999px; background:linear-gradient(90deg,#7c3aed,#db2777); transition:width .8s ease; }
+    .score-circle { width:88px; height:88px; border-radius:50%; background:linear-gradient(135deg,#7c3aed,#db2777);
+                    display:flex; align-items:center; justify-content:center; flex-direction:column; color:#fff; }
+    .score-circle .sn { font-size:1.6rem; font-weight:800; line-height:1; }
+    .score-circle .sl { font-size:10px; opacity:.85; }
+    .cert-card { background:#f5f3ff; border:1.5px solid #ede9fe; border-radius:10px; padding:10px 14px; margin-bottom:8px; }
+    .cert-title { font-weight:700; color:#7c3aed; font-size:13px; }
+    .cert-reason { color:#4b5563; font-size:12px; margin-top:2px; }
+    .miss-chip { display:inline-block; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;
+                 border-radius:999px; font-size:11px; padding:2px 9px; margin:2px; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-light bg-white shadow-sm">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="../index.html">
+      <img src="/resume_generator/assets/airesume-logo.svg" alt="AI Resume" style="height:34px;margin-right:10px;"/>
+      <span class="fw-bold">AI Resume</span>
+    </a>
+    <div id="nav-user" class="text-muted small"></div>
+  </div>
+</nav>
+
+<!-- Not logged in -->
+<div id="guest-view" style="display:none" class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+      <h3 class="fw-bold mb-3">Create an account to get started</h3>
+      <p class="text-muted">Save your resume, subjects, and skills so you can come back anytime.</p>
+      <a href="../register.html" class="btn btn-primary me-2">Create account</a>
+      <a href="../login.html" class="btn btn-outline-primary">Log in</a>
+    </div>
+  </div>
+</div>
+
+<!-- Wizard -->
+<div id="wizard-view" style="display:none" class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+
+      <!-- Steps indicator -->
+      <div class="wizard-steps mb-4">
+        <div class="ws active" id="ws-1"><div class="ws-dot">1</div><div class="ws-label">Info</div></div>
+        <div class="ws" id="ws-2"><div class="ws-dot">2</div><div class="ws-label">Education</div></div>
+        <div class="ws" id="ws-3"><div class="ws-dot">3</div><div class="ws-label">Subjects</div></div>
+        <div class="ws" id="ws-4"><div class="ws-dot">4</div><div class="ws-label">Skills</div></div>
+        <div class="ws" id="ws-5"><div class="ws-dot">5</div><div class="ws-label">Experience</div></div>
       </div>
-    </nav>
 
-    <main class="py-5">
-      <div class="container">
-        <div class="row justify-content-center">
-          <div class="col-md-10 ar-animate">
-            <div class="card shadow-sm">
-              <div class="card-body p-4 p-md-5">
-                <h2 class="mb-3 ar-gradient-text fw-bold">Welcome — Let's get your resume started</h2>
-                <p class="text-muted">We'll guide you through a quick setup to build a resume tailored to your goals. It only takes a few steps.</p>
+      <div class="card p-4 p-md-5">
 
-                <!-- Account options for guests -->
-                <div id="account-options" class="row gy-3 mt-4">
-                  <div class="col-md-6">
-                    <div class="p-3 border rounded h-100">
-                      <h5 class="mb-1">Create account</h5>
-                      <p class="small text-muted">Sign up to save your progress and export PDFs.</p>
-                      <a class="btn btn-primary btn-sm" href="../register.html">Create account</a>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="p-3 border rounded h-100">
-                      <h5 class="mb-1">Already have an account?</h5>
-                      <p class="small text-muted">Log in to continue where you left off.</p>
-                      <a class="btn btn-outline-primary btn-sm" href="../login.html">Log in</a>
-                    </div>
-                  </div>
-                </div>
+        <!-- ====== STEP 1: Personal Info ====== -->
+        <div class="step-panel active" id="step-1">
+          <h4 class="fw-bold mb-1">Personal Information</h4>
+          <p class="text-muted mb-4">Tell us a bit about yourself and your target role.</p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+            <input id="s1-name" class="form-control form-control-lg" placeholder="e.g. Ahmad Syafiq bin Razali">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Target Job Title / Field <span class="text-danger">*</span></label>
+            <input id="s1-field" class="form-control form-control-lg" placeholder="e.g. Software Engineer, Data Analyst, Graphic Designer">
+          </div>
+          <div class="d-flex justify-content-end mt-4">
+            <button class="btn btn-next" onclick="goStep(2)">Next: Education →</button>
+          </div>
+        </div>
 
-                <hr class="my-4" />
-                <h6>What we'll ask</h6>
-                <ul class="small text-muted">
-                  <li>Personal details (name, contact)</li>
-                  <li>Work experience and education</li>
-                  <li>Skills and a short summary</li>
-                </ul>
+        <!-- ====== STEP 2: Education ====== -->
+        <div class="step-panel" id="step-2">
+          <h4 class="fw-bold mb-1">Education</h4>
+          <p class="text-muted mb-4">Pick your institution and course. If yours isn't listed, type it in — we'll add it for future students.</p>
 
-                <div class="mt-4 text-end">
-                  <a class="btn btn-link text-decoration-none" href="../index.html">Back</a>
-                </div>
-              </div>
+          <!-- Institution -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Institution <span class="text-danger">*</span></label>
+            <div class="ac-wrap">
+              <input id="s2-inst-input" class="form-control" placeholder="Search or type your university / college..." autocomplete="off">
+              <div id="s2-inst-dropdown" class="ac-dropdown" style="display:none"></div>
+            </div>
+            <input type="hidden" id="s2-inst-id">
+            <div id="s2-inst-tag" class="mt-2" style="display:none"></div>
+          </div>
+
+          <!-- Course -->
+          <div class="mb-3" id="s2-course-wrap" style="opacity:.4; pointer-events:none">
+            <label class="form-label fw-semibold">Course / Programme <span class="text-danger">*</span></label>
+            <div class="ac-wrap">
+              <input id="s2-course-input" class="form-control" placeholder="Search or type your course name..." autocomplete="off">
+              <div id="s2-course-dropdown" class="ac-dropdown" style="display:none"></div>
+            </div>
+            <input type="hidden" id="s2-course-id">
+            <div id="s2-course-tag" class="mt-2" style="display:none"></div>
+          </div>
+
+          <!-- Level + Year -->
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Qualification</label>
+              <select id="s2-level" class="form-select">
+                <option value="degree">Bachelor's Degree</option>
+                <option value="diploma">Diploma</option>
+                <option value="masters">Master's</option>
+                <option value="phd">PhD</option>
+                <option value="certificate">Certificate</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Graduation Year</label>
+              <input id="s2-end-year" class="form-control" type="number" placeholder="e.g. 2025" min="2000" max="2035">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">CGPA <span class="text-muted small">(optional)</span></label>
+              <input id="s2-cgpa" class="form-control" type="number" placeholder="e.g. 3.75" min="0" max="4" step="0.01">
             </div>
           </div>
-        </div>
-      </div>
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="s2-current">
+            <label class="form-check-label text-muted small" for="s2-current">I am currently studying here</label>
+          </div>
 
-      <!-- Continue modal (shown for logged-in users) -->
-      <div id="lang-modal" style="display:none; position:fixed; inset:0; z-index:1050;">
-        <div style="position:absolute; inset:0; background:rgba(0,0,0,0.35);"></div>
-        <div style="position:relative; width:92%; max-width:520px; margin:10vh auto; background:#fff; border-radius:12px; box-shadow:0 30px 60px rgba(0,0,0,0.25); padding:24px; text-align:center;">
-          <button id="lang-modal-close" style="position:absolute; right:18px; top:18px; border:0; background:transparent; font-size:22px; cursor:pointer;">&times;</button>
-          <h2 class="mb-2" style="font-weight:700; font-size:28px;">Ready to build your resume?</h2>
-          <p class="text-muted mb-4">Next, pick a template and we'll guide you through the rest.</p>
-          <button id="continue-to-templates" class="btn btn-primary btn-lg">Continue to templates</button>
-          <div style="margin-top:14px;">
-            <button id="back-home" class="btn btn-link text-decoration-none">Back to home page</button>
+          <div class="d-flex justify-content-between mt-4">
+            <button class="btn btn-back" onclick="goStep(1)">← Back</button>
+            <button class="btn btn-next" onclick="saveEducationAndNext()">Next: Subjects →</button>
           </div>
         </div>
+
+        <!-- ====== STEP 3: Subjects ====== -->
+        <div class="step-panel" id="step-3">
+          <h4 class="fw-bold mb-1">Subjects Studied</h4>
+          <p class="text-muted mb-2">Select all subjects you've taken. Toggle visibility to control what appears on your resume.</p>
+          <div id="s3-loading" class="ai-loading mb-3" style="display:none">
+            <div class="spinner-sm"></div>
+            <span id="s3-loading-msg">Loading subjects for your course…</span>
+          </div>
+          <div id="s3-content"></div>
+          <div id="s3-add-custom" class="mt-3" style="display:none">
+            <button class="btn btn-sm btn-outline-secondary" onclick="showAddCustomSubject()">+ Add a subject not listed</button>
+          </div>
+          <div id="s3-custom-form" class="mt-2" style="display:none">
+            <div class="input-group">
+              <input id="s3-custom-name" class="form-control" placeholder="Subject name">
+              <input id="s3-custom-code" class="form-control" placeholder="Code (optional)" style="max-width:130px">
+              <button class="btn btn-outline-primary" onclick="addCustomSubject()">Add</button>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between mt-4">
+            <button class="btn btn-back" onclick="goStep(2)">← Back</button>
+            <button class="btn btn-next" onclick="saveSubjectsAndNext()">Next: Skills →</button>
+          </div>
+        </div>
+
+        <!-- ====== STEP 4: Skills ====== -->
+        <div class="step-panel" id="step-4">
+          <h4 class="fw-bold mb-1">Skills & Certifications</h4>
+          <p class="text-muted mb-2">We inferred these from your subjects. Select the ones that apply, then add anything extra.</p>
+          <div id="s4-loading" class="ai-loading mb-3" style="display:none">
+            <div class="spinner-sm"></div>
+            <span>AI is analysing your subjects to suggest skills…</span>
+          </div>
+          <div id="s4-content"></div>
+
+          <!-- Manual skill add -->
+          <div class="mt-4 p-3" style="background:#f8fafc;border-radius:10px;border:1px dashed #e2e8f0">
+            <div class="fw-semibold mb-2" style="font-size:14px">Add a skill manually</div>
+            <div class="row g-2">
+              <div class="col-md-4"><input id="s4-manual-skill" class="form-control form-control-sm" placeholder="Skill name (e.g. Docker)"></div>
+              <div class="col-md-3">
+                <select id="s4-manual-cat" class="form-select form-select-sm">
+                  <option value="Programming Language">Programming Language</option>
+                  <option value="Framework/Library">Framework/Library</option>
+                  <option value="Database">Database</option>
+                  <option value="DevOps/Tools">DevOps/Tools</option>
+                  <option value="AI/ML">AI/ML</option>
+                  <option value="Web Development">Web Development</option>
+                  <option value="Mobile Development">Mobile Development</option>
+                  <option value="Soft Skill">Soft Skill</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <select id="s4-manual-prof" class="form-select form-select-sm">
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate" selected>Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="expert">Expert</option>
+                </select>
+              </div>
+              <div class="col-md-3"><button class="btn btn-sm btn-outline-primary w-100" onclick="addManualSkill()">+ Add Skill</button></div>
+            </div>
+          </div>
+
+          <!-- Certification add -->
+          <div class="mt-3 p-3" style="background:#f8fafc;border-radius:10px;border:1px dashed #e2e8f0">
+            <div class="fw-semibold mb-2" style="font-size:14px">Add a certification</div>
+            <div class="row g-2">
+              <div class="col-md-5"><input id="s4-cert-name" class="form-control form-control-sm" placeholder="e.g. AWS Certified Cloud Practitioner"></div>
+              <div class="col-md-5"><input id="s4-cert-url"  class="form-control form-control-sm" placeholder="Certificate URL (optional)"></div>
+              <div class="col-md-2"><button class="btn btn-sm btn-outline-success w-100" onclick="addCertification()">+ Add</button></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between mt-4">
+            <button class="btn btn-back" onclick="goStep(3)">← Back</button>
+            <button class="btn btn-next" onclick="saveSkillsAndNext()">Next: Experience →</button>
+          </div>
+        </div>
+
+        <!-- ====== STEP 5: Experience + Tone ====== -->
+        <div class="step-panel" id="step-5">
+          <h4 class="fw-bold mb-1">Work Experience & Tone</h4>
+          <p class="text-muted mb-4">Describe any work experience, internships, or projects. Don't worry if you don't have much — AI will fill the gaps.</p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Work Experience / Projects</label>
+            <textarea id="s5-experience" class="form-control" rows="5"
+              placeholder="e.g. Software Engineering Intern at Company XYZ, June–Aug 2024. Built REST APIs using Node.js and MySQL. Reduced query time by 40%.
+
+Or: Final Year Project — Developed a mobile app for campus room booking using Flutter and Firebase."></textarea>
+            <div class="form-text">Include roles, dates, key achievements, and tech used. The more detail you give, the better your resume will be.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Resume Tone</label>
+            <select id="s5-tone" class="form-select">
+              <option value="Professional">Professional</option>
+              <option value="Confident">Confident & Direct</option>
+              <option value="Academic">Academic</option>
+              <option value="Creative">Creative</option>
+              <option value="Friendly">Friendly</option>
+            </select>
+          </div>
+          <div class="d-flex justify-content-between mt-4">
+            <button class="btn btn-back" onclick="goStep(4)">← Back</button>
+            <button class="btn btn-next" onclick="finishWizard()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:5px"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Choose Template & Generate
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /card -->
+
+      <!-- ====== CAREER INSIGHTS (shown after Step 5) ====== -->
+      <div id="career-panel" class="card p-4 p-md-5 mt-3">
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <div id="ci-score-ring" class="score-circle flex-shrink-0">
+            <div class="sn" id="ci-score">—</div>
+            <div class="sl">Score</div>
+          </div>
+          <div>
+            <h4 class="fw-bold mb-1">Your Career Insights</h4>
+            <p class="text-muted mb-0" style="font-size:14px">Based on your subjects and skills, here are the best-fit roles and what to work on next.</p>
+          </div>
+        </div>
+
+        <div class="ai-loading mb-3" id="ci-loading">
+          <div class="spinner-sm"></div>
+          <span>AI is analysing your profile…</span>
+        </div>
+
+        <div id="ci-content" style="display:none">
+          <!-- Job matches -->
+          <div class="fw-bold mb-2" style="font-size:14px">🎯 Best-fit job roles</div>
+          <div id="ci-jobs"></div>
+
+          <!-- Certs -->
+          <div class="fw-bold mt-4 mb-2" style="font-size:14px">📜 Recommended certifications / courses</div>
+          <div id="ci-certs"></div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <button class="btn btn-back" onclick="backToStep5()">← Edit Experience</button>
+          <button class="btn btn-next" onclick="goToTemplates()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:5px"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Choose Template & Generate
+          </button>
+        </div>
       </div>
 
-      <script>
-        (function(){
-          const token = localStorage.getItem('rg_token');
-          const modal = document.getElementById('lang-modal');
-          const accountOptions = document.getElementById('account-options');
+    </div>
+  </div>
+</div><!-- /wizard-view -->
 
-          if (token) {
-            // show continue modal for logged-in users
-            modal.style.display = 'block';
-            if (accountOptions) accountOptions.style.display = 'none';
-          }
+<script>
+const API = window.AR_resolveApiBase();
+const token = localStorage.getItem('rg_token');
+let userId = null;
 
-          const continueBtn = document.getElementById('continue-to-templates');
-          if (continueBtn){
-            continueBtn.addEventListener('click', function(){
-              window.location.href = 'templates.html';
-            });
-          }
+// ================================================================
+// AUTH GUARD
+// ================================================================
+(function init(){
+  if (!token) {
+    document.getElementById('guest-view').style.display = 'block';
+    return;
+  }
+  try {
+    const p = JSON.parse(atob(token.split('.')[1]));
+    userId = p.user_id;
+    document.getElementById('nav-user').textContent = p.name || p.email || '';
+  } catch(e) {
+    document.getElementById('guest-view').style.display = 'block';
+    return;
+  }
+  document.getElementById('wizard-view').style.display = 'block';
 
-          document.getElementById('lang-modal-close').addEventListener('click', function(e){
-            e.preventDefault();
-            modal.style.display = 'none';
-            if (accountOptions) accountOptions.style.display = '';
-          });
+  // Prefill step 1 from profile
+  fetch(API + '/users.php?user_id=' + encodeURIComponent(userId), { headers: authHeaders() })
+    .then(r => r.json()).then(d => {
+      const u = d && d.user;
+      if (u && u.name) document.getElementById('s1-name').value = u.name;
+    }).catch(()=>{});
+})();
 
-          // back to home button
-          const backBtn = document.getElementById('back-home');
-          if (backBtn){
-            backBtn.addEventListener('click', function(e){
-              e.preventDefault();
-              window.location.href = '../index.html';
-            });
-          }
-        })();
-      </script>
+function authHeaders() {
+  // Send both Authorization AND X-Auth-Token.
+  // InfinityFree's Apache strips the Authorization header before PHP sees it,
+  // so we include X-Auth-Token as a plain custom header that passes through.
+  return token
+    ? { 'Authorization': 'Bearer ' + token, 'X-Auth-Token': token, 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json' };
+}
 
-    </main>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="/resume_generator/assets/three-bg.js"></script>
-  </body>
+// ================================================================
+// WIZARD NAVIGATION
+// ================================================================
+let currentStep = 1;
+
+function goStep(n) {
+  // Validate before advancing
+  if (n > currentStep) {
+    if (currentStep === 1 && !validateStep1()) return;
+  }
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+  document.querySelectorAll('.ws').forEach((w, i) => {
+    w.classList.remove('active','done');
+    if (i + 1 < n)  w.classList.add('done');
+    if (i + 1 === n) w.classList.add('active');
+    // Replace dot with check for done steps
+    const dot = w.querySelector('.ws-dot');
+    if (i + 1 < n) dot.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    else dot.textContent = i + 1;
+  });
+  currentStep = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function validateStep1() {
+  const name  = document.getElementById('s1-name').value.trim();
+  const field = document.getElementById('s1-field').value.trim();
+  if (!name)  { alert('Please enter your name.'); return false; }
+  if (!field) { alert('Please enter your target job title.'); return false; }
+  return true;
+}
+
+// ================================================================
+// STEP 2: EDUCATION AUTOCOMPLETE
+// ================================================================
+let selectedInstitution = null;  // { institution_id, name }
+let selectedCourse      = null;  // { course_id, name }
+let isNewInstitution    = false;
+let isNewCourse         = false;
+
+function setupAutocomplete(inputId, dropdownId, fetchFn, onSelect) {
+  const input    = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  let debounce;
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounce);
+    const val = input.value.trim();
+    if (val.length < 1) { dropdown.style.display = 'none'; return; }
+    debounce = setTimeout(() => fetchFn(val, dropdown, input, onSelect), 280);
+  });
+
+  input.addEventListener('focus', () => {
+    if (input.value.trim().length >= 1) input.dispatchEvent(new Event('input'));
+  });
+
+  // When user leaves the field without choosing from the dropdown,
+  // treat whatever they typed as a "new" entry so the workflow isn't blocked.
+  input.addEventListener('blur', () => {
+    // Small delay so a dropdown click can fire first
+    setTimeout(() => {
+      const val = input.value.trim();
+      if (!val) return;
+      // Call onSelect with a new-entry object if nothing was formally selected yet
+      // (detected by checking whether the hidden id field is still empty)
+      const idField = document.getElementById(inputId.replace('-input', '-id'));
+      if (idField && !idField.value) {
+        onSelect({ name: val, institution_id: null, course_id: null }, true);
+      }
+      dropdown.style.display = 'none';
+    }, 200);
+  });
+
+  document.addEventListener('click', e => {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+  });
+}
+
+function fetchInstitutions(q, dropdown, input, onSelect) {
+  fetch(API + '/institutions.php?search=' + encodeURIComponent(q))
+    .then(r => r.json()).then(items => {
+      dropdown.innerHTML = '';
+      items.slice(0, 8).forEach(inst => {
+        const d = document.createElement('div'); d.className = 'ac-item';
+        d.innerHTML = `<div>${inst.name}</div><div class="ac-sub">${inst.city || ''} · ${inst.type || ''} ${inst.verified ? '✓' : ''}</div>`;
+        d.onclick = () => onSelect(inst, false);
+        dropdown.appendChild(d);
+      });
+      // "Add new" option
+      const addEl = document.createElement('div'); addEl.className = 'ac-item ac-add';
+      addEl.textContent = `➕ Add "${q}" as new institution`;
+      addEl.onclick = () => onSelect({ name: q, institution_id: null }, true);
+      dropdown.appendChild(addEl);
+      dropdown.style.display = 'block';
+    }).catch(() => { dropdown.style.display = 'none'; });
+}
+
+function fetchCourses(q, dropdown, input, onSelect) {
+  const instId = document.getElementById('s2-inst-id').value;
+  fetch(API + '/courses.php?institution_id=' + encodeURIComponent(instId) + '&search=' + encodeURIComponent(q))
+    .then(r => r.json()).then(items => {
+      dropdown.innerHTML = '';
+      items.slice(0, 8).forEach(c => {
+        const d = document.createElement('div'); d.className = 'ac-item';
+        d.innerHTML = `<div>${c.name}</div><div class="ac-sub">${c.code ? c.code + ' · ' : ''}${c.level || ''} ${c.verified ? '✓' : ''}</div>`;
+        d.onclick = () => onSelect(c, false);
+        dropdown.appendChild(d);
+      });
+      const addEl = document.createElement('div'); addEl.className = 'ac-item ac-add';
+      addEl.textContent = `➕ Add "${q}" as new course`;
+      addEl.onclick = () => onSelect({ name: q, course_id: null }, true);
+      dropdown.appendChild(addEl);
+      dropdown.style.display = 'block';
+    }).catch(() => { dropdown.style.display = 'none'; });
+}
+
+function onInstSelect(inst, isNew) {
+  // Guard: ignore if this institution was already set (prevents blur re-firing on existing selection)
+  if (selectedInstitution && selectedInstitution.name === inst.name && !isNew) return;
+
+  selectedInstitution = inst;
+  isNewInstitution    = isNew;
+  document.getElementById('s2-inst-input').value = inst.name;
+  document.getElementById('s2-inst-id').value    = inst.institution_id || '';
+  document.getElementById('s2-inst-dropdown').style.display = 'none';
+
+  const tag = document.getElementById('s2-inst-tag');
+  tag.style.display = 'inline-flex';
+  tag.innerHTML = `<span class="badge" style="background:${isNew?'#fef3c7;color:#92400e':'#dcfce7;color:#166534'};font-size:12px;padding:5px 10px;border-radius:999px;">${isNew ? '🆕 New — will be added to the database' : '✓ ' + inst.name}</span>`;
+
+  // Unlock course field
+  const cw = document.getElementById('s2-course-wrap');
+  cw.style.opacity = '1'; cw.style.pointerEvents = 'auto';
+  document.getElementById('s2-course-input').value = '';
+  document.getElementById('s2-course-id').value    = '';
+  selectedCourse   = null;
+  isNewCourse      = false;
+  document.getElementById('s2-course-tag').style.display = 'none';
+  // Focus the course field so the user can continue naturally
+  setTimeout(() => document.getElementById('s2-course-input').focus(), 50);
+}
+
+function onCourseSelect(course, isNew) {
+  selectedCourse = course;
+  isNewCourse    = isNew;
+  document.getElementById('s2-course-input').value = course.name;
+  document.getElementById('s2-course-id').value    = course.course_id || '';
+  document.getElementById('s2-course-dropdown').style.display = 'none';
+
+  const tag = document.getElementById('s2-course-tag');
+  tag.style.display = 'inline-flex';
+  tag.innerHTML = `<span class="badge" style="background:${isNew?'#fef3c7;color:#92400e':'#dcfce7;color:#166534'};font-size:12px;padding:5px 10px;border-radius:999px;">${isNew ? '🆕 New course — AI will suggest subjects' : '✓ ' + course.name}</span>`;
+}
+
+setupAutocomplete('s2-inst-input',   's2-inst-dropdown',   fetchInstitutions, onInstSelect);
+setupAutocomplete('s2-course-input', 's2-course-dropdown', fetchCourses,      onCourseSelect);
+
+function showStepBanner(stepNum, type, msg) {
+  // type: 'ok' | 'err'
+  let b = document.getElementById('s' + stepNum + '-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 's' + stepNum + '-banner';
+    b.className = 'save-banner';
+    document.getElementById('step-' + stepNum).appendChild(b);
+  }
+  b.className = 'save-banner ' + type;
+  b.textContent = msg;
+  if (type === 'ok') setTimeout(() => { b.style.display = 'none'; }, 3000);
+}
+
+async function saveEducationAndNext() {
+  const instName   = document.getElementById('s2-inst-input').value.trim();
+  const courseName = document.getElementById('s2-course-input').value.trim();
+  if (!instName)   { alert('Please enter your institution.'); return; }
+  if (!courseName) { alert('Please enter your course name.'); return; }
+
+  const btn = document.querySelector('#step-2 .btn-next');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  let instId   = document.getElementById('s2-inst-id').value   || null;
+  let courseId = document.getElementById('s2-course-id').value || null;
+
+  try {
+    // Create institution in DB if new
+    if (!instId || isNewInstitution) {
+      const r = await fetch(API + '/institutions.php', { method:'POST', headers: authHeaders(),
+        body: JSON.stringify({ name: instName }) });
+      if (!r.ok) throw new Error('institutions API ' + r.status);
+      const d = await r.json();
+      instId = d.institution_id;
+      document.getElementById('s2-inst-id').value = instId;
+      selectedInstitution = { institution_id: instId, name: instName };
+    }
+
+    // Create course in DB if new
+    if (!courseId || isNewCourse) {
+      const level = document.getElementById('s2-level').value;
+      const r = await fetch(API + '/courses.php', { method:'POST', headers: authHeaders(),
+        body: JSON.stringify({ institution_id: instId, name: courseName, level }) });
+      if (!r.ok) throw new Error('courses API ' + r.status);
+      const d = await r.json();
+      courseId = d.course_id;
+      document.getElementById('s2-course-id').value = courseId;
+      selectedCourse = { course_id: courseId, name: courseName };
+      isNewCourse = false;
+    }
+
+    // Save to user_education
+    const endYear   = parseInt(document.getElementById('s2-end-year').value) || null;
+    const isCurrent = document.getElementById('s2-current').checked ? 1 : 0;
+    const cgpa      = parseFloat(document.getElementById('s2-cgpa').value) || null;
+    const level     = document.getElementById('s2-level').value;
+
+    const er = await fetch(API + '/user_education.php', { method:'POST', headers: authHeaders(),
+      body: JSON.stringify({
+        institution_id: instId, institution_name: instName,
+        course_id: courseId,   course_name: courseName,
+        course_level: level,   end_year: endYear,
+        is_current: isCurrent, cgpa
+      })
+    });
+    if (!er.ok) throw new Error('user_education API ' + er.status);
+
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'Next: Subjects →';
+    showStepBanner(2, 'err', '⚠ Could not save to database (' + err.message + '). Check that the migration SQL was run in phpMyAdmin and the PHP files are uploaded.');
+    return;
+  }
+
+  btn.disabled = false; btn.textContent = 'Next: Subjects →';
+  goStep(3);
+  loadSubjectsStep();
+}
+
+// ================================================================
+// STEP 3: SUBJECTS
+// ================================================================
+let subjectState = {};   // subject_id -> { selected, show_in_resume, data }
+let customSubjects = []; // manually added subjects not yet in DB
+
+async function loadSubjectsStep() {
+  const courseId   = document.getElementById('s2-course-id').value;
+  const courseName = document.getElementById('s2-course-input').value.trim();
+  const content    = document.getElementById('s3-content');
+  const loading    = document.getElementById('s3-loading');
+  const loadMsg    = document.getElementById('s3-loading-msg');
+
+  content.innerHTML = '';
+  subjectState = {};
+
+  if (!courseId) {
+    content.innerHTML = '<p class="text-muted">No course selected.</p>';
+    return;
+  }
+
+  loading.style.display = 'flex';
+
+  // Fetch subjects from DB for this course
+  const r = await fetch(API + '/user_subjects.php?course_id=' + courseId, { headers: authHeaders() });
+  let subjects = r.ok ? await r.json() : [];
+
+  // If no subjects exist (new course), use AI to suggest them
+  if (subjects.length === 0 && isNewCourse) {
+    loadMsg.textContent = 'New course detected — AI is generating the subject list…';
+    const instName = document.getElementById('s2-inst-input').value.trim();
+    const level    = document.getElementById('s2-level').value;
+    const ar = await fetch(API + '/subjects.php?action=ai_suggest', { method:'POST', headers: authHeaders(),
+      body: JSON.stringify({ course_name: courseName, institution_name: instName, level }) });
+    const ad = ar.ok ? await ar.json() : null;
+
+    if (ad && ad.subjects) {
+      // Save AI-suggested subjects to DB (shared table)
+      const sr = await fetch(API + '/subjects.php', { method:'POST', headers: authHeaders(),
+        body: JSON.stringify({ course_id: courseId, subjects: ad.subjects }) });
+      const sd = sr.ok ? await sr.json() : null;
+      subjects = sd && sd.subjects ? sd.subjects.map(s => ({ ...s, selected: 0, show_in_resume: 1 })) : [];
+    }
+  }
+
+  loading.style.display = 'none';
+
+  if (subjects.length === 0) {
+    content.innerHTML = '<p class="text-muted">No subjects found for this course. Add yours below.</p>';
+    document.getElementById('s3-add-custom').style.display = 'block';
+    return;
+  }
+
+  // Group by semester
+  const bySem = {};
+  subjects.forEach(s => {
+    const sem = s.semester || 0;
+    if (!bySem[sem]) bySem[sem] = [];
+    bySem[sem].push(s);
+    subjectState[s.subject_id] = { selected: s.selected || 1, show_in_resume: s.show_in_resume !== undefined ? s.show_in_resume : 1, data: s };
+  });
+
+  let html = '<div class="mb-2"><small class="text-muted">Click to select / deselect. Use the toggle to control visibility on your resume.</small></div>';
+  Object.keys(bySem).sort((a,b) => a-b).forEach(sem => {
+    html += `<div class="cat-label">${sem == 0 ? 'All Semesters' : 'Semester ' + sem}</div>`;
+    html += '<div class="subject-grid">';
+    bySem[sem].forEach(s => {
+      const sel = subjectState[s.subject_id].selected;
+      html += `
+        <div class="subject-chip ${sel ? 'selected' : ''}" onclick="toggleSubject(${s.subject_id})" data-id="${s.subject_id}">
+          <div class="sc-check">✓</div>
+          <div class="sc-name">${s.name}</div>
+          <div class="sc-code">${s.code || ''}</div>
+          <div class="sc-sem">${s.semester ? 'Sem ' + s.semester : ''}</div>
+          <div class="show-toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" ${subjectState[s.subject_id].show_in_resume ? 'checked' : ''}
+              onchange="toggleSubjectShow(${s.subject_id}, this.checked)">
+            Show in resume
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  });
+  content.innerHTML = html;
+  document.getElementById('s3-add-custom').style.display = 'block';
+}
+
+function toggleSubject(id) {
+  if (!subjectState[id]) return;
+  subjectState[id].selected = subjectState[id].selected ? 0 : 1;
+  const chip = document.querySelector(`.subject-chip[data-id="${id}"]`);
+  if (chip) chip.classList.toggle('selected', !!subjectState[id].selected);
+}
+
+function toggleSubjectShow(id, checked) {
+  if (subjectState[id]) subjectState[id].show_in_resume = checked ? 1 : 0;
+}
+
+function showAddCustomSubject() {
+  document.getElementById('s3-custom-form').style.display = 'block';
+}
+
+async function addCustomSubject() {
+  const name = document.getElementById('s3-custom-name').value.trim();
+  const code = document.getElementById('s3-custom-code').value.trim();
+  if (!name) return;
+  const courseId = document.getElementById('s2-course-id').value;
+  const r = await fetch(API + '/subjects.php', { method:'POST', headers: authHeaders(),
+    body: JSON.stringify({ course_id: courseId, name, code: code || undefined }) });
+  const d = r.ok ? await r.json() : null;
+  if (d && d.subjects && d.subjects.length) {
+    const s = d.subjects[0];
+    subjectState[s.subject_id] = { selected: 1, show_in_resume: 1, data: s };
+    const content = document.getElementById('s3-content');
+    const chip = document.createElement('div'); chip.className = 'subject-chip selected mt-2'; chip.dataset.id = s.subject_id;
+    chip.innerHTML = `<div class="sc-check">✓</div><div class="sc-name">${s.name}</div><div class="sc-code">${s.code||''}</div>`;
+    chip.onclick = () => toggleSubject(s.subject_id);
+    content.appendChild(chip);
+  }
+  document.getElementById('s3-custom-name').value = '';
+  document.getElementById('s3-custom-code').value = '';
+  document.getElementById('s3-custom-form').style.display = 'none';
+}
+
+async function saveSubjectsAndNext() {
+  const selected = Object.entries(subjectState)
+    .filter(([,v]) => v.selected)
+    .map(([id,v]) => ({ subject_id: parseInt(id), show_in_resume: v.show_in_resume }));
+
+  const btn = document.querySelector('#step-3 .btn-next');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  if (selected.length > 0) {
+    try {
+      const r = await fetch(API + '/user_subjects.php', { method:'POST', headers: authHeaders(),
+        body: JSON.stringify({ subjects: selected }) });
+      if (!r.ok) throw new Error('user_subjects API ' + r.status);
+    } catch(err) {
+      btn.disabled = false; btn.textContent = 'Next: Skills →';
+      showStepBanner(3, 'err', '⚠ Could not save subjects (' + err.message + '). Check PHP files are uploaded and migration SQL was run.');
+      return;
+    }
+  }
+
+  btn.disabled = false; btn.textContent = 'Next: Skills →';
+  goStep(4);
+  loadSkillsStep();
+}
+
+// ================================================================
+// STEP 4: SKILLS
+// ================================================================
+let skillState = {};  // skill_name -> { selected, show_in_resume, source, category, proficiency }
+
+async function loadSkillsStep() {
+  const loading = document.getElementById('s4-loading');
+  const content = document.getElementById('s4-content');
+  content.innerHTML = '';
+  skillState = {};
+
+  // Get selected subject IDs
+  const selectedIds = Object.entries(subjectState)
+    .filter(([,v]) => v.selected).map(([id]) => parseInt(id));
+
+  if (selectedIds.length === 0) {
+    content.innerHTML = '<p class="text-muted">No subjects selected — add skills manually below.</p>';
+    return;
+  }
+
+  loading.style.display = 'flex';
+  const courseName = document.getElementById('s2-course-input').value.trim();
+
+  const r = await fetch(API + '/suggest_skills.php', { method:'POST', headers: authHeaders(),
+    body: JSON.stringify({ subject_ids: selectedIds, course_name: courseName }) });
+  const d = r.ok ? await r.json() : null;
+
+  loading.style.display = 'none';
+
+  const skills = d && d.skills ? d.skills : [];
+
+  // Also fetch any already-saved skills
+  const existing = await fetch(API + '/user_skills.php', { headers: authHeaders() })
+    .then(r2 => r2.json()).catch(() => []);
+
+  existing.forEach(s => {
+    skillState[s.skill_name] = { ...s, selected: true };
+  });
+  skills.forEach(s => {
+    if (!skillState[s.skill_name]) {
+      skillState[s.skill_name] = { ...s, selected: true, show_in_resume: 1 };
+    }
+  });
+
+  renderSkills();
+}
+
+function renderSkills() {
+  const content = document.getElementById('s4-content');
+  // Group by category
+  const byCat = {};
+  Object.values(skillState).forEach(s => {
+    const cat = s.category || 'Other';
+    if (!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(s);
+  });
+
+  let html = '';
+  const catOrder = ['Programming Language','Framework/Library','Database','Web Development',
+                    'Mobile Development','DevOps/Tools','AI/ML','Soft Skill','Domain Knowledge','Other'];
+  const orderedCats = [...catOrder.filter(c => byCat[c]), ...Object.keys(byCat).filter(c => !catOrder.includes(c))];
+
+  orderedCats.forEach(cat => {
+    if (!byCat[cat] || !byCat[cat].length) return;
+    html += `<div class="cat-label">${cat}</div><div>`;
+    byCat[cat].forEach(s => {
+      const sel = s.selected;
+      html += `<span class="skill-badge ${sel?'selected':'unselected'}" onclick="toggleSkill('${esc(s.skill_name)}')" title="${esc(s.proficiency||'')}">
+        ${esc(s.skill_name)}
+        <span class="sb-remove" onclick="event.stopPropagation();removeSkill('${esc(s.skill_name)}')" title="Remove">×</span>
+      </span>`;
+    });
+    html += '</div>';
+  });
+
+  content.innerHTML = html || '<p class="text-muted">No skills yet — add them manually below.</p>';
+
+  // Certifications section
+  const certs = Object.values(skillState).filter(s => s.certification_name);
+  if (certs.length) {
+    content.innerHTML += `<div class="cat-label">Certifications</div><ul class="list-unstyled">` +
+      certs.map(s => `<li class="small mb-1">🏅 ${esc(s.certification_name)}${s.certification_url ? ` <a href="${esc(s.certification_url)}" target="_blank" class="ms-1" style="font-size:11px">View</a>` : ''}</li>`).join('') +
+      `</ul>`;
+  }
+}
+
+function toggleSkill(name) {
+  if (skillState[name]) skillState[name].selected = !skillState[name].selected;
+  renderSkills();
+}
+
+function removeSkill(name) {
+  delete skillState[name];
+  renderSkills();
+}
+
+function addManualSkill() {
+  const name  = document.getElementById('s4-manual-skill').value.trim();
+  const cat   = document.getElementById('s4-manual-cat').value;
+  const prof  = document.getElementById('s4-manual-prof').value;
+  if (!name) return;
+  skillState[name] = { skill_name: name, category: cat, proficiency: prof, source: 'manual', selected: true, show_in_resume: 1 };
+  document.getElementById('s4-manual-skill').value = '';
+  renderSkills();
+}
+
+function addCertification() {
+  const certName = document.getElementById('s4-cert-name').value.trim();
+  const certUrl  = document.getElementById('s4-cert-url').value.trim();
+  if (!certName) return;
+  const key = '__cert__' + certName;
+  skillState[key] = { skill_name: certName, category: 'Certification', source: 'manual',
+                      certification_name: certName, certification_url: certUrl || null,
+                      selected: true, show_in_resume: 1 };
+  document.getElementById('s4-cert-name').value = '';
+  document.getElementById('s4-cert-url').value  = '';
+  renderSkills();
+}
+
+async function saveSkillsAndNext() {
+  const toSave = Object.values(skillState).filter(s => s.selected).map(s => ({
+    skill_name: s.skill_name, category: s.category, source: s.source || 'manual',
+    proficiency: s.proficiency || 'intermediate', show_in_resume: s.show_in_resume !== false ? 1 : 0,
+    certification_name: s.certification_name || null, certification_url: s.certification_url || null,
+  }));
+
+  const btn = document.querySelector('#step-4 .btn-next');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  if (toSave.length > 0) {
+    try {
+      const r = await fetch(API + '/user_skills.php', { method:'POST', headers: authHeaders(),
+        body: JSON.stringify({ skills: toSave }) });
+      if (!r.ok) throw new Error('user_skills API ' + r.status);
+    } catch(err) {
+      btn.disabled = false; btn.textContent = 'Next: Experience →';
+      showStepBanner(4, 'err', '⚠ Could not save skills (' + err.message + '). Check PHP files are uploaded and migration SQL was run.');
+      return;
+    }
+  }
+
+  btn.disabled = false; btn.textContent = 'Next: Experience →';
+  goStep(5);
+}
+
+// ================================================================
+// STEP 5: FINISH → CAREER INSIGHTS
+// ================================================================
+function finishWizard() {
+  const experience = document.getElementById('s5-experience').value.trim();
+  const tone       = document.getElementById('s5-tone').value;
+  localStorage.setItem('rg_wizard', JSON.stringify({
+    name:        document.getElementById('s1-name').value.trim(),
+    field:       document.getElementById('s1-field').value.trim(),
+    tone, experience,
+    institution: document.getElementById('s2-inst-input').value.trim(),
+    course:      document.getElementById('s2-course-input').value.trim(),
+    course_id:   document.getElementById('s2-course-id').value,
+    use_profile: true,
+  }));
+
+  // Hide wizard steps, show career insights panel
+  document.querySelector('.wizard-steps').style.display = 'none';
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('career-panel').style.display = 'block';
+  loadCareerInsights();
+}
+
+function backToStep5() {
+  document.getElementById('career-panel').style.display = 'none';
+  document.querySelector('.wizard-steps').style.display = 'flex';
+  goStep(5);
+}
+
+function goToTemplates() {
+  window.location.href = 'templates.html';
+}
+
+async function loadCareerInsights() {
+  document.getElementById('ci-loading').style.display = 'flex';
+  document.getElementById('ci-content').style.display = 'none';
+
+  const skillNames = Object.values(skillState)
+    .filter(s => s.selected)
+    .map(s => ({ skill_name: s.skill_name, category: s.category || 'Other', proficiency: s.proficiency || 'intermediate' }));
+
+  const selectedSubjectIds = Object.entries(subjectState)
+    .filter(([,v]) => v.selected).map(([id]) => parseInt(id));
+
+  const payload = {
+    course_name:  document.getElementById('s2-course-input').value.trim(),
+    field:        document.getElementById('s1-field').value.trim(),
+    skills:       skillNames,
+    subject_ids:  selectedSubjectIds,
+  };
+
+  try {
+    const r = await fetch(API + '/suggest_jobs.php', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error('suggest_jobs ' + r.status);
+    const d = await r.json();
+
+    document.getElementById('ci-loading').style.display = 'none';
+    document.getElementById('ci-content').style.display = 'block';
+
+    // Overall score
+    const score = d.overall_score ?? 0;
+    document.getElementById('ci-score').textContent = score + '%';
+
+    // Jobs
+    const jobsEl = document.getElementById('ci-jobs');
+    jobsEl.innerHTML = '';
+    (d.jobs || []).forEach(j => {
+      const pct = j.match_pct ?? 0;
+      const missing = (j.missing_skills || []).map(s => `<span class="miss-chip">${esc(s)}</span>`).join('');
+      jobsEl.innerHTML += `
+        <div class="job-card">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-bold" style="font-size:14px">${esc(j.title)}</div>
+            <div class="fw-bold" style="color:#7c3aed;font-size:13px">${pct}% match</div>
+          </div>
+          <div class="match-bar-wrap"><div class="match-bar" style="width:${pct}%"></div></div>
+          ${missing ? `<div class="mt-2" style="font-size:12px;color:#6b7280">Skills to develop: ${missing}</div>` : ''}
+        </div>`;
+    });
+    if (!d.jobs || !d.jobs.length) jobsEl.innerHTML = '<p class="text-muted small">No job matches returned.</p>';
+
+    // Certs
+    const certsEl = document.getElementById('ci-certs');
+    certsEl.innerHTML = '';
+    (d.certifications || []).forEach(c => {
+      certsEl.innerHTML += `
+        <div class="cert-card">
+          <div class="cert-title">${esc(c.name)}</div>
+          <div class="cert-reason">${esc(c.reason)}</div>
+          ${c.url ? `<a href="${esc(c.url)}" target="_blank" style="font-size:11px;color:#7c3aed">Learn more →</a>` : ''}
+        </div>`;
+    });
+    if (!d.certifications || !d.certifications.length) certsEl.innerHTML = '<p class="text-muted small">No certification recommendations.</p>';
+
+  } catch(err) {
+    document.getElementById('ci-loading').innerHTML =
+      `<div class="text-warning small">⚠ Could not load career insights (${err.message}). You can still generate your resume.</div>`;
+  }
+}
+
+// ================================================================
+// UTILS
+// ================================================================
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/resume_generator/assets/three-bg.js"></script>
+</body>
 </html>

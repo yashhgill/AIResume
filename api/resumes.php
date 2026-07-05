@@ -54,13 +54,100 @@ if ($method === 'POST') {
     // Support action=generate: create a resume record and populate ai_result_resume using Groq AI
     if (isset($data['action']) && $data['action'] === 'generate') {
         $resume_id = bin2hex(random_bytes(16));
-        
+
+        // ── Profile-data enrichment ──────────────────────────────────────────
+        // When the frontend sends use_profile_data=true (wizard flow), fetch the
+        // user's education, subjects, and skills from the DB and inject them into
+        // the generation context. Falls back to whatever the frontend sent if the
+        // token is missing or the tables are empty.
+        if (!empty($data['use_profile_data'])) {
+            $bearerToken = get_bearer_token();
+            $bPayload    = $bearerToken ? verify_token($bearerToken) : null;
+            if ($bPayload) {
+                $uid = $bPayload['user_id'];
+
+                // Education
+                try {
+                    $eduStmt = $pdo->prepare(
+                        'SELECT ue.course_level, ue.cgpa, ue.end_year, ue.is_current,
+                                COALESCE(i.name, ue.institution_name) AS inst,
+                                COALESCE(c.name, ue.course_name) AS course
+                         FROM user_education ue
+                         LEFT JOIN institutions i ON i.institution_id = ue.institution_id
+                         LEFT JOIN courses c     ON c.course_id     = ue.course_id
+                         WHERE ue.user_id = ?
+                         ORDER BY ue.sort_order DESC, ue.id DESC LIMIT 3'
+                    );
+                    $eduStmt->execute([$uid]);
+                    $edus = $eduStmt->fetchAll(PDO::FETCH_ASSOC);
+                    if ($edus) {
+                        $eduLines = [];
+                        foreach ($edus as $e) {
+                            $line = '';
+                            if ($e['course_level']) $line .= ucfirst($e['course_level']) . ' of ';
+                            $line .= $e['course'] ?? '';
+                            if ($e['inst']) $line .= ', ' . $e['inst'];
+                            if ($e['cgpa']) $line .= ' (CGPA: ' . $e['cgpa'] . ')';
+                            if ($e['is_current']) $line .= ' — Currently studying';
+                            elseif ($e['end_year']) $line .= ', ' . $e['end_year'];
+                            $eduLines[] = trim($line);
+                        }
+                        $data['education'] = implode("\n", $eduLines);
+                    }
+                } catch (\Exception $e2) { /* table may not exist yet */ }
+
+                // Subjects (for curriculum context appended to experience)
+                $subjectContext = '';
+                try {
+                    $subjStmt = $pdo->prepare(
+                        'SELECT s.name, s.code, s.learning_outcomes
+                         FROM user_subjects us
+                         JOIN subjects s ON s.subject_id = us.subject_id
+                         WHERE us.user_id = ? AND us.show_in_resume = 1
+                         ORDER BY s.semester ASC, s.name ASC'
+                    );
+                    $subjStmt->execute([$uid]);
+                    $subjects = $subjStmt->fetchAll(PDO::FETCH_ASSOC);
+                    if ($subjects) {
+                        $subjectContext = "\n\n[Curriculum context — use to strengthen the resume]\nSubjects studied:\n";
+                        foreach ($subjects as $s) {
+                            $subjectContext .= '• ' . $s['name'];
+                            if ($s['code']) $subjectContext .= ' (' . $s['code'] . ')';
+                            $los = $s['learning_outcomes'] ? json_decode($s['learning_outcomes'], true) : [];
+                            if ($los) $subjectContext .= ': ' . implode('; ', array_slice($los, 0, 2));
+                            $subjectContext .= "\n";
+                        }
+                    }
+                } catch (\Exception $e2) { /* table may not exist yet */ }
+
+                // Skills
+                try {
+                    $skillStmt = $pdo->prepare(
+                        'SELECT skill_name FROM user_skills
+                         WHERE user_id = ? AND show_in_resume = 1
+                         ORDER BY source DESC, category ASC, skill_name ASC'
+                    );
+                    $skillStmt->execute([$uid]);
+                    $skillRows = $skillStmt->fetchAll(PDO::FETCH_COLUMN);
+                    if ($skillRows) {
+                        $data['skills'] = implode(', ', $skillRows);
+                    }
+                } catch (\Exception $e2) { /* table may not exist yet */ }
+
+                // Append subject context to experience (AI will see it in the prompt)
+                if ($subjectContext) {
+                    $data['experience'] = trim(($data['experience'] ?? '') . $subjectContext);
+                }
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         // Get user data
         $name = $data['name'] ?? 'Professional Candidate';
         $tone = $data['tone'] ?? 'professional';
         $template = $data['template'] ?? null;
         $useHtmlCss = $data['generate_html_css'] ?? true; // New flag for HTML+CSS generation
-        
+
         // Generate complete HTML + CSS resume using Groq API
         if ($useHtmlCss) {
             $aiResult = generate_resume_html_css_with_groq(
