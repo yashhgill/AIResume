@@ -189,6 +189,12 @@ function get_bearer_token() {
     if ($auth && preg_match('/Bearer\s+(.*)$/i', $auth, $m)) {
         return trim($m[1]);
     }
+
+    // 3. Query-string fallback: ?_t=TOKEN (works on hosts that strip all custom headers)
+    if (!empty($_GET['_t'])) {
+        return trim($_GET['_t']);
+    }
+
     return null;
 }
 

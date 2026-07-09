@@ -102,6 +102,17 @@
     </main>
 
     <script>
+// Patch fetch to append _t=token to all API calls (works on hosts that strip custom headers)
+(function() {
+  const _orig = window.fetch;
+  window.fetch = function(url, opts) {
+    const t = localStorage.getItem("rg_token");
+    if (t && typeof url === "string" && url.includes("/api/")) {
+      url += (url.includes("?") ? "&" : "?") + "_t=" + encodeURIComponent(t);
+    }
+    return _orig.call(this, url, opts);
+  };
+})();
       const API_BASE = window.AR_resolveApiBase();
 
       // App is English-only
