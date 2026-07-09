@@ -16,7 +16,7 @@ if ($method === 'POST') {
     $action = $data['action'];
     if ($action === 'login') {
         if (!isset($data['email']) || !isset($data['password'])) { http_response_code(400); echo json_encode(['error'=>'Missing email or password']); exit; }
-        $stmt = $pdo->prepare('SELECT user_id, name, email, password_hash, auth_provider FROM users WHERE email = ?');
+        $stmt = $pdo->prepare('SELECT user_id, name, email, password_hash, auth_provider, is_admin FROM users WHERE email = ?');
         $stmt->execute([$data['email']]);
         $user = $stmt->fetch();
         if (!$user || !$user['password_hash'] || !password_verify($data['password'], $user['password_hash'])) {
@@ -28,7 +28,7 @@ if ($method === 'POST') {
             }
             exit;
         }
-        $payload = ['user_id'=>$user['user_id'], 'email'=>$user['email'], 'name'=>$user['name'], 'exp'=>time()+2592000]; // 30 days
+        $payload = ['user_id'=>$user['user_id'], 'email'=>$user['email'], 'name'=>$user['name'], 'is_admin'=>(bool)($user['is_admin'] ?? false), 'exp'=>time()+2592000]; // 30 days
         $token = sign_token($payload);
         echo json_encode(['token'=>$token, 'user'=>$payload]);
         exit;

@@ -90,13 +90,13 @@ if (!$googleId || !$email) {
 $pdo = getPDO();
 
 // 1) Already linked by google_id -> log them in.
-$stmt = $pdo->prepare('SELECT user_id, name, email FROM users WHERE google_id = ?');
+$stmt = $pdo->prepare('SELECT user_id, name, email, is_admin FROM users WHERE google_id = ?');
 $stmt->execute([$googleId]);
 $user = $stmt->fetch();
 
 if (!$user) {
     // 2) Existing local account with the same email -> link it.
-    $stmt = $pdo->prepare('SELECT user_id, name, email FROM users WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT user_id, name, email, is_admin FROM users WHERE email = ?');
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
@@ -118,7 +118,7 @@ if (!$user) {
     }
 }
 
-$payload = ['user_id' => $user['user_id'], 'email' => $user['email'], 'name' => $user['name'], 'exp' => time() + 2592000]; // 30 days
+$payload = ['user_id' => $user['user_id'], 'email' => $user['email'], 'name' => $user['name'], 'is_admin' => (bool)($user['is_admin'] ?? false), 'exp' => time() + 2592000]; // 30 days
 $token = sign_token($payload);
 
 http_response_code(200);
