@@ -34,14 +34,21 @@ $payload = $token ? verify_token($token) : null;
 if (!$payload) { http_response_code(401); echo json_encode(['error' => 'Unauthorised']); exit; }
 
 $pdo = getPDO();
-$stmt = $pdo->prepare('SELECT is_admin FROM users WHERE user_id = ?');
+$stmt = $pdo->prepare('SELECT email, is_admin FROM users WHERE user_id = ?');
 $stmt->execute([$payload['user_id']]);
-$isAdmin = (bool)$stmt->fetchColumn();
+$me      = $stmt->fetch();
+$isAdmin = (bool)($me['is_admin'] ?? false);
 if (!$isAdmin) { http_response_code(403); echo json_encode(['error' => 'Admin access required']); exit; }
+
+// Owner = email is on the ADMIN_EMAILS allow-list. Owners can manage roles;
+// regular admins have identical feature access but cannot promote/demote.
+$myEmail = $me['email'] ?? ($payload['email'] ?? '');
+$isOwner = is_admin_email($myEmail);
 
 $method   = $_SERVER['REQUEST_METHOD'];
 $resource = strtolower(trim($_GET['resource'] ?? ''));
 $id       = (int)($_GET['id'] ?? 0);
+$sid      = trim((string)($_GET['id'] ?? ''));  // string id for user (varchar) ops
 
 // ================================================================
 // GET
@@ -98,11 +105,18 @@ if ($method === 'GET') {
             echo json_encode($rows);
             break;
 
+        case 'whoami':
+            echo json_encode(['ok' => true, 'is_admin' => $isAdmin, 'is_owner' => $isOwner, 'email' => $myEmail]);
+            break;
+
         case 'users':
             $stmt = $pdo->query(
                 'SELECT user_id, name, email, is_admin, created_at FROM users ORDER BY created_at DESC LIMIT 200'
             );
-            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as &$r) { $r['is_owner'] = is_admin_email($r['email']) ? 1 : 0; }
+            unset($r);
+            echo json_encode($rows);
             break;
 
         case 'faculties':
@@ -387,14 +401,27 @@ if ($method === 'PUT') {
         exit;
     }
 
-    if ($resource === 'user' && $id) {
-        if ($id === $payload['user_id']) {
+    if ($resource === 'user' && $sid !== '') {
+        if (!$isOwner) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Only the owner can manage admin roles']);
+            exit;
+        }
+        if ($sid === $payload['user_id']) {
             http_response_code(400);
-            echo json_encode(['error' => 'Cannot change your own admin status']);
+            echo json_encode(['error' => 'Cannot change your own role']);
+            exit;
+        }
+        $t = $pdo->prepare('SELECT email FROM users WHERE user_id = ?');
+        $t->execute([$sid]);
+        $temail = $t->fetchColumn();
+        if ($temail !== false && is_admin_email($temail)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'This account is a protected owner and cannot be changed']);
             exit;
         }
         $pdo->prepare('UPDATE users SET is_admin=? WHERE user_id=?')
-            ->execute([(int)($data['is_admin'] ?? 0), $id]);
+            ->execute([(int)($data['is_admin'] ?? 0), $sid]);
         echo json_encode(['ok' => true]);
         exit;
     }

@@ -190,6 +190,10 @@
 
       <!-- USERS -->
       <div class="panel" id="panel-users">
+        <div class="mb-2">
+          <h5 class="fw-bold mb-1">Users &amp; roles</h5>
+          <p class="text-muted small mb-0" id="roles-hint">Grant or revoke admin access. Owners are protected and set via configuration.</p>
+        </div>
         <div class="d-flex justify-content-between align-items-center mb-3">
           <input class="form-control search-input" id="user-search" placeholder="Search users…">
         </div>
@@ -226,6 +230,7 @@
 const API = window.AR_resolveApiBase();
 const token = localStorage.getItem('rg_token');
 let adminUserId = null;
+let IS_OWNER = false;
 
 // Patch fetch to append _t=token to all API calls (works on hosts that strip custom headers)
 (function() {
@@ -249,6 +254,12 @@ let adminUserId = null;
 
   const r = await fetch(API + '/admin.php?resource=stats', { headers: authH() });
   if (r.status === 401 || r.status === 403) { show403(); return; }
+
+  // Determine if this admin is also the owner (can manage roles)
+  try {
+    const wr = await fetch(API + '/admin.php?resource=whoami', { headers: authH() });
+    if (wr.ok) { const w = await wr.json(); IS_OWNER = !!w.is_owner; }
+  } catch(e){}
 
   document.getElementById('app').style.display = 'flex';
   loadStats();
@@ -406,24 +417,34 @@ async function loadUsers() {
   renderUsers(users);
 }
 
+function roleBadge(u) {
+  if (u.is_owner) return '<span class="badge" style="background:#7c3aed">Owner</span>';
+  if (u.is_admin) return '<span class="badge badge-admin">Admin</span>';
+  return '<span class="badge bg-light text-muted border">User</span>';
+}
 function renderUsers(data) {
   const tbody = document.getElementById('user-tbody');
   if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No users.</td></tr>'; return; }
-  tbody.innerHTML = data.map(u => `
+  tbody.innerHTML = data.map(u => {
+    let action;
+    if (u.user_id === adminUserId) {
+      action = '<span class="text-muted small">You</span>';
+    } else if (u.is_owner) {
+      action = '<span class="text-muted small">Protected</span>';
+    } else if (IS_OWNER) {
+      action = `<button class="btn btn-xs btn-sm ${u.is_admin?'btn-outline-danger':'btn-outline-primary'} table-action" onclick="toggleAdmin('${u.user_id}', ${u.is_admin?0:1})">${u.is_admin?'Remove admin':'Make admin'}</button>`;
+    } else {
+      action = '';
+    }
+    return `
     <tr>
       <td class="fw-semibold">${esc(u.name||'—')}</td>
       <td>${esc(u.email)}</td>
-      <td>
-        ${u.is_admin ? '<span class="badge badge-admin">Admin</span>' : '<span class="badge bg-light text-muted border">User</span>'}
-      </td>
+      <td>${roleBadge(u)}</td>
       <td class="text-muted small">${u.created_at ? u.created_at.slice(0,10) : '—'}</td>
-      <td class="text-end">
-        ${u.user_id !== adminUserId
-          ? `<button class="btn btn-xs btn-sm btn-outline-secondary table-action" onclick="toggleAdmin(${u.user_id}, ${u.is_admin?0:1})">${u.is_admin?'Remove admin':'Make admin'}</button>`
-          : '<span class="text-muted small">You</span>'}
-      </td>
-    </tr>
-  `).join('');
+      <td class="text-end">${action}</td>
+    </tr>`;
+  }).join('');
 }
 
 document.getElementById('user-search').addEventListener('input', function() {
