@@ -119,6 +119,7 @@
       <div class="panel" id="panel-courses">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <input class="form-control search-input" id="course-search" placeholder="Search courses…">
+          <button class="btn btn-sm btn-primary ms-2" onclick="openEditModal('course', null)">+ Add</button>
         </div>
         <div class="card border-0 shadow-sm">
           <table class="table table-hover mb-0">
@@ -132,7 +133,7 @@
       <div class="panel" id="panel-subjects">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <input class="form-control search-input" id="subj-search" placeholder="Search subjects…">
-          <div class="ms-2 text-muted small" id="subj-course-filter">All courses</div>
+          <button class="btn btn-sm btn-primary ms-2" onclick="openEditModal('subject', null)">+ Add</button>
         </div>
         <div class="card border-0 shadow-sm">
           <table class="table table-hover mb-0">
@@ -333,7 +334,8 @@ function renderInstitutions(data) {
       <td><span class="badge ${i.verified ? 'badge-verified' : 'badge-unverified'}">${i.verified ? 'Verified' : 'Unverified'}</span></td>
       <td class="text-end">
         <button class="btn btn-xs btn-sm btn-outline-primary table-action me-1" onclick="openEditModal('institution', ${JSON.stringify(JSON.stringify(i))})">Edit</button>
-        ${!i.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action" onclick="verifyItem('institution', ${i.institution_id})">Verify</button>` : ''}
+        ${!i.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action me-1" onclick="verifyItem('institution', ${i.institution_id})">Verify</button>` : ''}
+        <button class="btn btn-xs btn-sm btn-outline-danger table-action" onclick="deleteItem('institution', ${i.institution_id})">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -365,7 +367,8 @@ function renderCourses(data) {
       <td><span class="badge ${c.verified ? 'badge-verified' : 'badge-unverified'}">${c.verified ? 'Verified' : 'Unverified'}</span></td>
       <td class="text-end">
         <button class="btn btn-xs btn-sm btn-outline-primary table-action me-1" onclick="openEditModal('course', ${JSON.stringify(JSON.stringify(c))})">Edit</button>
-        ${!c.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action" onclick="verifyItem('course', ${c.course_id})">Verify</button>` : ''}
+        ${!c.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action me-1" onclick="verifyItem('course', ${c.course_id})">Verify</button>` : ''}
+        <button class="btn btn-xs btn-sm btn-outline-danger table-action" onclick="deleteItem('course', ${c.course_id})">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -398,7 +401,8 @@ function renderSubjects(data) {
       <td><span class="badge ${s.verified ? 'badge-verified' : 'badge-unverified'}">${s.verified ? 'Verified' : 'Unverified'}</span></td>
       <td class="text-end">
         <button class="btn btn-xs btn-sm btn-outline-primary table-action me-1" onclick="openEditModal('subject', ${JSON.stringify(JSON.stringify(s))})">Edit</button>
-        ${!s.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action" onclick="verifyItem('subject', ${s.subject_id})">Verify</button>` : ''}
+        ${!s.verified ? `<button class="btn btn-xs btn-sm btn-outline-success table-action me-1" onclick="verifyItem('subject', ${s.subject_id})">Verify</button>` : ''}
+        <button class="btn btn-xs btn-sm btn-outline-danger table-action" onclick="deleteItem('subject', ${s.subject_id})">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -474,8 +478,28 @@ async function verifyItem(type, id) {
   }
 }
 
+async function deleteItem(type, id) {
+  if (!confirm('Delete this ' + type + '? This cannot be undone.')) return;
+  const r = await fetch(API + '/admin.php?resource=' + type + '&id=' + id, { method: 'DELETE', headers: authH() });
+  if (r.ok) {
+    if (type === 'institution') { loadInstitutions(); loadStats(); }
+    if (type === 'course')      { loadCourses(); loadStats(); }
+    if (type === 'subject')     loadSubjects();
+  } else { alert('Delete failed.'); }
+}
+
 // ── Edit Modal ────────────────────────────────────────────────────────────
 let modalState = { type: null, id: null };
+
+// Build <option>s for a foreign-key <select>. `sel` is the currently-selected id.
+function optsHtml(list, idKey, labelKey, sel, placeholder) {
+  let out = `<option value="">${placeholder || '— none —'}</option>`;
+  (list || []).forEach(o => {
+    const val = o[idKey];
+    out += `<option value="${val}" ${String(sel)===String(val)?'selected':''}>${esc(o[labelKey]||('#'+val))}</option>`;
+  });
+  return out;
+}
 
 function openEditModal(type, itemJson) {
   const item = itemJson ? JSON.parse(itemJson) : null;
@@ -513,12 +537,17 @@ function openEditModal(type, itemJson) {
           </select>
         </div>
       </div>
-      <div class="mb-2"><label class="form-label small fw-semibold">Faculty</label><input class="form-control form-control-sm" id="m-faculty" value="${esc(item?.faculty||'')}"></div>
+      <div class="mb-2"><label class="form-label small fw-semibold">Institution</label>
+        <select class="form-select form-select-sm" id="m-institution">${optsHtml(institutions,'institution_id','name',item?.institution_id,'— select institution —')}</select></div>
+      <div class="mb-2"><label class="form-label small fw-semibold">Faculty</label>
+        <select class="form-select form-select-sm" id="m-faculty-id">${optsHtml(faculties,'faculty_id','name',item?.faculty_id,'— no faculty —')}</select></div>
       <div class="form-check"><input type="checkbox" class="form-check-input" id="m-verified" ${item?.verified?'checked':''}><label class="form-check-label small">Verified</label></div>`;
   } else if (type === 'subject') {
     const los = Array.isArray(item?.learning_outcomes) ? item.learning_outcomes.join('\n') : '';
     const skills = Array.isArray(item?.skills_inferred) ? item.skills_inferred.join(', ') : '';
     html = `
+      <div class="mb-2"><label class="form-label small fw-semibold">Course</label>
+        <select class="form-select form-select-sm" id="m-course">${optsHtml(courses,'course_id','name',item?.course_id,'— select course —')}</select></div>
       <div class="row g-2 mb-2">
         <div class="col-8"><label class="form-label small fw-semibold">Name</label><input class="form-control form-control-sm" id="m-name" value="${esc(item?.name||'')}"></div>
         <div class="col-4"><label class="form-label small fw-semibold">Code</label><input class="form-control form-control-sm" id="m-code" value="${esc(item?.code||'')}"></div>
@@ -553,11 +582,15 @@ async function modalSave() {
       verified: document.getElementById('m-verified').checked ? 1 : 0,
     };
   } else if (type === 'course') {
+    const facSel = document.getElementById('m-faculty-id');
+    const facName = facSel && facSel.selectedIndex > 0 ? facSel.options[facSel.selectedIndex].text : null;
     body = {
       name: document.getElementById('m-name').value.trim(),
       code: document.getElementById('m-code').value.trim() || null,
       level: document.getElementById('m-level').value,
-      faculty: document.getElementById('m-faculty').value.trim() || null,
+      institution_id: document.getElementById('m-institution').value || null,
+      faculty_id: facSel && facSel.value ? facSel.value : null,
+      faculty: facName,
       verified: document.getElementById('m-verified').checked ? 1 : 0,
     };
   } else if (type === 'subject') {
@@ -569,6 +602,7 @@ async function modalSave() {
       name: document.getElementById('m-name').value.trim(),
       code: document.getElementById('m-code').value.trim() || null,
       semester: parseInt(document.getElementById('m-semester').value) || null,
+      course_id: document.getElementById('m-course') ? (document.getElementById('m-course').value || null) : null,
       learning_outcomes: losArr,
       skills_inferred: skillsArr,
       verified: document.getElementById('m-verified').checked ? 1 : 0,
@@ -580,6 +614,7 @@ async function modalSave() {
       name: document.getElementById('m-name').value.trim(),
       short_name: document.getElementById('m-short')?.value.trim() || null,
       description: document.getElementById('m-description')?.value.trim() || null,
+      institution_id: document.getElementById('m-institution') ? (document.getElementById('m-institution').value || null) : null,
       verified: document.getElementById('m-verified').checked ? 1 : 0,
     };
   }
@@ -661,6 +696,8 @@ function openFacultyModal(itemJson) {
       <div class="col"><label class="form-label small fw-semibold">Short Name</label>
         <input class="form-control form-control-sm" id="m-short" value="${esc(item?.short_name||'')}"></div>
     </div>
+    <div class="mb-2"><label class="form-label small fw-semibold">Institution</label>
+      <select class="form-select form-select-sm" id="m-institution">${optsHtml(institutions,'institution_id','name',item?.institution_id,'— select institution —')}</select></div>
     <div class="mb-2"><label class="form-label small fw-semibold">Description</label>
       <textarea class="form-control form-control-sm" id="m-description" rows="2">${esc(item?.description||'')}</textarea></div>
     <div class="form-check"><input type="checkbox" class="form-check-input" id="m-verified" ${item?.verified?'checked':''}>
@@ -692,10 +729,11 @@ function renderEnrolments(data) {
   tbody.innerHTML = data.map(e => {
     const statusCls = e.status === 'approved' ? 'badge-approved' : e.status === 'rejected' ? 'badge-rejected' : 'badge-pending';
     const date = e.approved_at ? e.approved_at.slice(0,10) : '—';
-    const actionBtns = e.status === 'pending'
+    const actionBtns = (e.status === 'pending'
       ? `<button class="btn btn-xs btn-sm btn-outline-success table-action me-1" onclick="updateEnrolment(${e.id},'approved')">Approve</button>
-         <button class="btn btn-xs btn-sm btn-outline-danger table-action" onclick="updateEnrolment(${e.id},'rejected')">Reject</button>`
-      : `<button class="btn btn-xs btn-sm btn-outline-secondary table-action" onclick="updateEnrolment(${e.id},'${e.status==='approved'?'rejected':'approved'}')">${e.status==='approved'?'Revoke':'Re-approve'}</button>`;
+         <button class="btn btn-xs btn-sm btn-outline-danger table-action me-1" onclick="updateEnrolment(${e.id},'rejected')">Reject</button>`
+      : `<button class="btn btn-xs btn-sm btn-outline-secondary table-action me-1" onclick="updateEnrolment(${e.id},'${e.status==='approved'?'rejected':'approved'}')">${e.status==='approved'?'Revoke':'Re-approve'}</button>`)
+      + `<button class="btn btn-xs btn-sm btn-outline-danger table-action" onclick="deleteEnrolment(${e.id})">Delete</button>`;
     return `
       <tr>
         <td class="fw-semibold">${esc(e.user_name||'—')}</td>
@@ -707,6 +745,12 @@ function renderEnrolments(data) {
         <td class="text-end">${actionBtns}</td>
       </tr>`;
   }).join('');
+}
+
+async function deleteEnrolment(id) {
+  if (!confirm('Delete this enrolment record? This cannot be undone.')) return;
+  const r = await fetch(API + '/admin.php?resource=enrolment&id=' + id, { method: 'DELETE', headers: authH() });
+  if (r.ok) { loadEnrolments(); loadStats(); } else alert('Delete failed.');
 }
 
 async function updateEnrolment(id, status) {

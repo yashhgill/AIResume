@@ -74,7 +74,7 @@ if ($method === 'GET') {
             $stmt = $pdo->prepare(
                 "SELECT c.*, i.name AS institution_name, COUNT(s.subject_id) AS subject_count
                  FROM courses c
-                 JOIN institutions i ON i.institution_id = c.institution_id
+                 LEFT JOIN institutions i ON i.institution_id = c.institution_id
                  LEFT JOIN subjects s ON s.course_id = c.course_id
                  {$where}
                  GROUP BY c.course_id
@@ -91,8 +91,8 @@ if ($method === 'GET') {
             $stmt = $pdo->prepare(
                 "SELECT s.*, c.name AS course_name, i.name AS institution_name
                  FROM subjects s
-                 JOIN courses c ON c.course_id = s.course_id
-                 JOIN institutions i ON i.institution_id = c.institution_id
+                 LEFT JOIN courses c ON c.course_id = s.course_id
+                 LEFT JOIN institutions i ON i.institution_id = c.institution_id
                  {$where}
                  ORDER BY s.verified DESC, s.semester ASC, s.name ASC"
             );
@@ -372,10 +372,13 @@ if ($method === 'PUT') {
         $pdo->prepare(
             'UPDATE courses SET name=COALESCE(?,name), code=COALESCE(?,code),
              level=COALESCE(?,level), faculty=COALESCE(?,faculty),
+             institution_id=COALESCE(?,institution_id), faculty_id=COALESCE(?,faculty_id),
              verified=COALESCE(?,verified) WHERE course_id=?'
         )->execute([
             $data['name'] ?? null, $data['code'] ?? null,
             $data['level'] ?? null, $data['faculty'] ?? null,
+            isset($data['institution_id']) ? (int)$data['institution_id'] : null,
+            isset($data['faculty_id']) && $data['faculty_id'] ? (int)$data['faculty_id'] : null,
             isset($data['verified']) ? (int)$data['verified'] : null,
             $id,
         ]);
@@ -388,12 +391,13 @@ if ($method === 'PUT') {
         $ski = isset($data['skills_inferred'])   ? json_encode($data['skills_inferred'])   : null;
         $pdo->prepare(
             'UPDATE subjects SET name=COALESCE(?,name), code=COALESCE(?,code),
-             semester=COALESCE(?,semester),
+             semester=COALESCE(?,semester), course_id=COALESCE(?,course_id),
              learning_outcomes=COALESCE(?,learning_outcomes),
              skills_inferred=COALESCE(?,skills_inferred),
              verified=COALESCE(?,verified) WHERE subject_id=?'
         )->execute([
             $data['name'] ?? null, $data['code'] ?? null, $data['semester'] ?? null,
+            isset($data['course_id']) && $data['course_id'] ? (int)$data['course_id'] : null,
             $lo, $ski, isset($data['verified']) ? (int)$data['verified'] : null,
             $id,
         ]);
@@ -430,12 +434,13 @@ if ($method === 'PUT') {
         try {
             $pdo->prepare(
                 'UPDATE faculties SET name=COALESCE(?,name), short_name=COALESCE(?,short_name),
-                 description=COALESCE(?,description), verified=COALESCE(?,verified)
-                 WHERE faculty_id=?'
+                 description=COALESCE(?,description), institution_id=COALESCE(?,institution_id),
+                 verified=COALESCE(?,verified) WHERE faculty_id=?'
             )->execute([
                 $data['name'] ?? null,
                 $data['short_name'] ?? null,
                 $data['description'] ?? null,
+                isset($data['institution_id']) && $data['institution_id'] ? (int)$data['institution_id'] : null,
                 isset($data['verified']) ? (int)$data['verified'] : null,
                 $id,
             ]);
@@ -476,10 +481,11 @@ if ($method === 'PUT') {
 // ================================================================
 if ($method === 'DELETE') {
     $tableMap = [
-        'institution' => ['institutions', 'institution_id'],
-        'course'      => ['courses',      'course_id'],
-        'subject'     => ['subjects',     'subject_id'],
-        'faculty'     => ['faculties',    'faculty_id'],
+        'institution' => ['institutions',  'institution_id'],
+        'course'      => ['courses',       'course_id'],
+        'subject'     => ['subjects',      'subject_id'],
+        'faculty'     => ['faculties',     'faculty_id'],
+        'enrolment'   => ['user_subjects', 'id'],
     ];
     if (isset($tableMap[$resource]) && $id) {
         [$table, $col] = $tableMap[$resource];
