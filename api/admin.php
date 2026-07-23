@@ -77,7 +77,7 @@ if ($method === 'GET') {
                  LEFT JOIN institutions i ON i.institution_id = c.institution_id
                  LEFT JOIN subjects s ON s.course_id = c.course_id
                  {$where}
-                 GROUP BY c.course_id
+                 GROUP BY c.course_id, i.name
                  ORDER BY c.verified DESC, i.name ASC, c.name ASC"
             );
             $stmt->execute($params);
@@ -127,7 +127,7 @@ if ($method === 'GET') {
                      FROM faculties f
                      LEFT JOIN institutions i ON i.institution_id = f.institution_id
                      LEFT JOIN courses c ON c.faculty_id = f.faculty_id
-                     GROUP BY f.faculty_id
+                     GROUP BY f.faculty_id, i.name
                      ORDER BY f.name ASC'
                 );
                 echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
