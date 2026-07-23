@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
     <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml" />
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
       body { min-height:100vh; display:flex; align-items:center; justify-content:center; }
       .auth-card{ width:100%; max-width:420px; padding:32px; box-shadow:0 20px 60px rgba(31,38,135,0.18); }
@@ -22,8 +21,6 @@
       <div class="text-center auth-title ar-gradient-text">Welcome back</div>
       <p class="text-muted text-center">Sign in to continue to <strong>AI Resume</strong>.</p>
 
-      <div id="google-btn-container" class="ar-google-btn-wrap mb-2"></div>
-      <div class="ar-divider">or</div>
 
       <form id="loginForm">
         <div class="mb-2"><input id="email" class="form-control" placeholder="Email" autocomplete="email"/></div>
@@ -38,7 +35,6 @@
     <script src="/resume_generator/assets/three-bg.js"></script>
     <script src="/resume_generator/assets/app-config.js"></script>
     <script>
-      window.AR_renderGoogleButton('google-btn-container', 'my-resumes.html');
 
       const API_BASE = window.AR_resolveApiBase();
       const errEl  = document.getElementById('login-error');

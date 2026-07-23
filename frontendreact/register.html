@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/resume_generator/assets/site-theme.css">
     <link rel="icon" href="/resume_generator/assets/airesume-logo.svg" type="image/svg+xml" />
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
       body { min-height:100vh; display:flex; align-items:center; justify-content:center; }
       .auth-card{ width:100%; max-width:520px; padding:32px; box-shadow:0 20px 60px rgba(31,38,135,0.18); }
@@ -21,8 +20,6 @@
       <div class="auth-title ar-gradient-text text-center">Create your account</div>
       <p class="text-muted text-center">Register to manage your resumes with <strong>AI Resume</strong>.</p>
 
-      <div id="google-btn-container" class="ar-google-btn-wrap mb-2"></div>
-      <div class="ar-divider">or register with email</div>
 
       <form id="regForm">
         <div class="mb-2"><input id="name" class="form-control" placeholder="Full name" autocomplete="name"/></div>
@@ -41,7 +38,6 @@
     <script src="/resume_generator/assets/three-bg.js"></script>
     <script src="/resume_generator/assets/app-config.js"></script>
     <script>
-      window.AR_renderGoogleButton('google-btn-container', 'onboard/start.html');
 
       const API_BASE = window.AR_resolveApiBase();
       const errEl  = document.getElementById('reg-error');
