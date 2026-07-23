@@ -118,6 +118,12 @@ if (!$user) {
     }
 }
 
+// Plug-and-play admin: if this email matches the ADMIN_EMAIL env var, promote once.
+$adminEmail = getenv('ADMIN_EMAIL');
+if ($adminEmail && strcasecmp($user['email'], $adminEmail) === 0 && empty($user['is_admin'])) {
+    $pdo->prepare('UPDATE users SET is_admin=1 WHERE user_id=?')->execute([$user['user_id']]);
+    $user['is_admin'] = 1;
+}
 $payload = ['user_id' => $user['user_id'], 'email' => $user['email'], 'name' => $user['name'], 'is_admin' => (bool)($user['is_admin'] ?? false), 'exp' => time() + 2592000]; // 30 days
 $token = sign_token($payload);
 

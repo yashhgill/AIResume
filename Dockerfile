@@ -18,6 +18,9 @@ RUN printf '<VirtualHost *:80>\n  DocumentRoot /var/www/html\n  <Directory /var/
 COPY . /var/www/html/resume_generator/
 RUN rm -f /var/www/html/resume_generator/api/config.local.php
 
+# Root redirect so the bare URL lands in the app
+RUN printf '<?php header("Location: /resume_generator/frontendreact/login.html"); exit;\n' > /var/www/html/index.php
+
 RUN mkdir -p \
       /var/www/html/resume_generator/assets/generated_designs \
       /var/www/html/resume_generator/assets/uploaded_images \
