@@ -43,7 +43,7 @@
   </style>
 </head>
 <body>
-<div id="access-denied" style="display:none" class="d-flex align-items-center justify-content-center min-vh-100">
+<div id="access-denied" style="display:none" class="align-items-center justify-content-center min-vh-100">
   <div class="text-center"><h3 class="fw-bold mb-2">Access Denied</h3><p class="text-muted">You need admin access to view this page.</p><a href="../index.html" class="btn btn-primary">Go Home</a></div>
 </div>
 
@@ -231,6 +231,7 @@ const API = window.AR_resolveApiBase();
 const token = localStorage.getItem('rg_token');
 let adminUserId = null;
 let IS_OWNER = false;
+async function safeJson(r){ const t = await r.text(); try { return t ? JSON.parse(t) : []; } catch(e){ return []; } }
 
 // Patch fetch to append _t=token to all API calls (works on hosts that strip custom headers)
 (function() {
@@ -272,7 +273,7 @@ let IS_OWNER = false;
   loadReports();
 })();
 
-function show403() { document.getElementById('access-denied').style.display = 'flex'; }
+function show403() { document.getElementById('access-denied').style.display = 'flex'; const a=document.getElementById('app'); if(a) a.style.display='none'; }
 function authH() { return { 'Authorization': 'Bearer ' + token, 'X-Auth-Token': token, 'Content-Type': 'application/json' }; }
 
 // ── Navigation ────────────────────────────────────────────────────────────
@@ -348,7 +349,7 @@ let courses = [];
 async function loadCourses() {
   const r = await fetch(API + '/admin.php?resource=courses', { headers: authH() });
   if (!r.ok) return;
-  courses = await r.json();
+  courses = await safeJson(r);
   renderCourses(courses);
 }
 
