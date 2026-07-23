@@ -107,8 +107,9 @@ if ($method === 'POST') {
     $saved = [];
 
     $stmt = $pdo->prepare(
-        'INSERT IGNORE INTO subjects (course_id, code, name, semester, learning_outcomes, skills_inferred, verified, created_by)
-         VALUES (?,?,?,?,?,?,0,?)'
+        'INSERT INTO subjects (course_id, code, name, semester, learning_outcomes, skills_inferred, verified, created_by)
+         VALUES (?,?,?,?,?,?,0,?)
+         ON CONFLICT (course_id, name) DO NOTHING'
     );
     foreach ($items as $s) {
         $name = trim($s['name'] ?? '');
@@ -124,7 +125,7 @@ if ($method === 'POST') {
             $ski,
             $userId,
         ]);
-        $saved[] = (int)$pdo->lastInsertId();
+        $saved[] = (int)$pdo->lastInsertId('subjects_subject_id_seq');
     }
 
     // Fetch and return saved subjects

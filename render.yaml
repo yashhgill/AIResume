@@ -1,0 +1,36 @@
+# Render Blueprint — plug & play.
+# In Render: New + → Blueprint → pick this repo. It provisions the Postgres
+# DB and the Docker web service, auto-wiring all DB_* env vars. You only fill
+# GROQ_API_KEY and GOOGLE_CLIENT_ID (marked sync:false) in the dashboard.
+databases:
+  - name: airesume-db
+    databaseName: airesume
+    user: airesume
+    plan: free
+
+services:
+  - type: web
+    name: airesume
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /resume_generator/frontendreact/login.html
+    envVars:
+      - key: DB_DRIVER
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase: { name: airesume-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: airesume-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: airesume-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: airesume-db, property: user }
+      - key: DB_PASS
+        fromDatabase: { name: airesume-db, property: password }
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false

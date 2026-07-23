@@ -75,7 +75,7 @@ if ($method === 'POST') {
         (int)($d['sort_order'] ?? 0),
     ]);
     http_response_code(201);
-    echo json_encode(['ok' => true, 'plo_id' => $pdo->lastInsertId()]);
+    echo json_encode(['ok' => true, 'plo_id' => $pdo->lastInsertId('programme_outcomes_plo_id_seq')]);
     exit;
 }
 

@@ -49,11 +49,11 @@ if ($method === 'POST') {
         'INSERT INTO user_skills
          (user_id, skill_name, category, source, proficiency, certification_name, certification_url, show_in_resume, sort_order)
          VALUES (?,?,?,?,?,?,?,?,?)
-         ON DUPLICATE KEY UPDATE
-           category=COALESCE(VALUES(category), category),
-           source=IF(source="manual","manual",VALUES(source)),
-           proficiency=COALESCE(VALUES(proficiency), proficiency),
-           show_in_resume=COALESCE(VALUES(show_in_resume), show_in_resume)'
+         ON CONFLICT (user_id, skill_name) DO UPDATE SET
+           category=COALESCE(EXCLUDED.category, user_skills.category),
+           source=CASE WHEN user_skills.source=\'manual\' THEN \'manual\' ELSE EXCLUDED.source END,
+           proficiency=COALESCE(EXCLUDED.proficiency, user_skills.proficiency),
+           show_in_resume=COALESCE(EXCLUDED.show_in_resume, user_skills.show_in_resume)'
     );
 
     foreach ($items as $s) {

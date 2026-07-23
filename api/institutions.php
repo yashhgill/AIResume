@@ -79,7 +79,7 @@ if ($method === 'POST') {
         $data['type'] ?? 'university',
         $userId,
     ]);
-    echo json_encode(['institution_id' => (int)$pdo->lastInsertId(), 'created' => true]);
+    echo json_encode(['institution_id' => (int)$pdo->lastInsertId('institutions_institution_id_seq'), 'created' => true]);
     exit;
 }
 

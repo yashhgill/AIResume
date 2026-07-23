@@ -86,7 +86,7 @@ if ($method === 'POST') {
         trim($data['faculty'] ?? '') ?: null,
         $userId,
     ]);
-    echo json_encode(['course_id' => (int)$pdo->lastInsertId(), 'created' => true]);
+    echo json_encode(['course_id' => (int)$pdo->lastInsertId('courses_course_id_seq'), 'created' => true]);
     exit;
 }
 

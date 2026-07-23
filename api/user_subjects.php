@@ -83,7 +83,7 @@ if ($method === 'POST') {
     $upsert = $pdo->prepare(
         'INSERT INTO user_subjects (user_id, subject_id, show_in_resume, grade)
          VALUES (?,?,?,?)
-         ON DUPLICATE KEY UPDATE show_in_resume=VALUES(show_in_resume), grade=COALESCE(VALUES(grade), grade)'
+         ON CONFLICT (user_id, subject_id) DO UPDATE SET show_in_resume=EXCLUDED.show_in_resume, grade=COALESCE(EXCLUDED.grade, user_subjects.grade)'
     );
     $count = 0;
     foreach ($subjects as $s) {

@@ -65,7 +65,7 @@ if ($method === 'POST') {
     );
     $stmt->execute([$userId, $instId, $instName ?: null, $courseId, $courseName ?: null,
                     $level ?: null, $startYear, $endYear, $isCurrent, $cgpa]);
-    $newId = (int)$pdo->lastInsertId();
+    $newId = (int)$pdo->lastInsertId('user_education_id_seq');
     echo json_encode(['ok' => true, 'id' => $newId]);
     exit;
 }

@@ -149,7 +149,7 @@ if ($method === 'GET') {
                     "SELECT u.user_id, u.name AS user_name, u.email,
                             c.course_id, c.name AS course_name,
                             COUNT(DISTINCT us.subject_id) AS subjects_approved,
-                            GROUP_CONCAT(DISTINCT s.plo_mapping SEPARATOR '|||') AS all_plo_mappings
+                            STRING_AGG(DISTINCT s.plo_mapping::text, '|||') AS all_plo_mappings
                      FROM user_subjects us
                      JOIN users u ON u.user_id = us.user_id
                      JOIN subjects s ON s.subject_id = us.subject_id
@@ -264,7 +264,7 @@ if ($method === 'POST') {
             (int)($data['verified'] ?? 0),
         ]);
         http_response_code(201);
-        echo json_encode(['ok' => true, 'institution_id' => $pdo->lastInsertId()]);
+        echo json_encode(['ok' => true, 'institution_id' => $pdo->lastInsertId('institutions_institution_id_seq')]);
         exit;
     }
 
@@ -282,7 +282,7 @@ if ($method === 'POST') {
             (int)($data['verified'] ?? 0),
         ]);
         http_response_code(201);
-        echo json_encode(['ok' => true, 'course_id' => $pdo->lastInsertId()]);
+        echo json_encode(['ok' => true, 'course_id' => $pdo->lastInsertId('courses_course_id_seq')]);
         exit;
     }
 
@@ -302,7 +302,7 @@ if ($method === 'POST') {
             (int)($data['verified'] ?? 0),
         ]);
         http_response_code(201);
-        echo json_encode(['ok' => true, 'subject_id' => $pdo->lastInsertId()]);
+        echo json_encode(['ok' => true, 'subject_id' => $pdo->lastInsertId('subjects_subject_id_seq')]);
         exit;
     }
 
@@ -319,7 +319,7 @@ if ($method === 'POST') {
                 (int)($data['verified'] ?? 0),
             ]);
             http_response_code(201);
-            echo json_encode(['ok' => true, 'faculty_id' => $pdo->lastInsertId()]);
+            echo json_encode(['ok' => true, 'faculty_id' => $pdo->lastInsertId('faculties_faculty_id_seq')]);
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Insert failed', 'message' => $e->getMessage()]);
