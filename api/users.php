@@ -43,6 +43,10 @@ if ($method === 'POST') {
     $stmt = $pdo->prepare('INSERT INTO users (user_id, name, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)');
     try {
         $stmt->execute([$user_id, $data['name'], $data['email'], $data['phone'] ?? null, $password_hash]);
+        // Auto-promote if this email is on the admin allow-list.
+        if (is_admin_email($data['email'])) {
+            $pdo->prepare('UPDATE users SET is_admin=1 WHERE user_id=?')->execute([$user_id]);
+        }
         http_response_code(201);
         echo json_encode(['user_id' => $user_id]);
     } catch (PDOException $e) {

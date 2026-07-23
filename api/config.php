@@ -36,6 +36,23 @@ function env_or_default($name, $default) {
     return ($val !== false && $val !== '') ? $val : $default;
 }
 
+// Admin allow-list: ADMIN_EMAILS (comma-separated) or legacy ADMIN_EMAIL.
+// Any account whose email is on this list is auto-promoted to admin on
+// login / registration / container boot. Zero manual SQL required.
+function admin_emails() {
+    $raw = getenv('ADMIN_EMAILS');
+    if ($raw === false || $raw === '') $raw = getenv('ADMIN_EMAIL') ?: '';
+    $out = [];
+    foreach (explode(',', $raw) as $e) {
+        $e = strtolower(trim($e));
+        if ($e !== '') $out[] = $e;
+    }
+    return $out;
+}
+function is_admin_email($email) {
+    return $email && in_array(strtolower(trim($email)), admin_emails(), true);
+}
+
 // ---- Defaults for anything config.local.php didn't already define ----
 // DB_HOST defaults to local-only (127.0.0.1) for local dev. For a deployed
 // backend (e.g. on Render with managed Postgres), set these via Render's

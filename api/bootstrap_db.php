@@ -23,6 +23,15 @@ try {
     $sql = file_get_contents($schemaFile);
     $pdo->exec($sql);
     fwrite(STDERR, "[bootstrap] Schema ensured OK.\n");
+
+    // Promote any already-registered admin emails (idempotent).
+    $emails = admin_emails();
+    if ($emails) {
+        $ph = implode(',', array_fill(0, count($emails), '?'));
+        $upd = $pdo->prepare("UPDATE users SET is_admin=1 WHERE LOWER(email) IN ($ph)");
+        $upd->execute($emails);
+        fwrite(STDERR, "[bootstrap] Admin emails promoted: " . implode(', ', $emails) . " (rows: " . $upd->rowCount() . ")\n");
+    }
 } catch (\Throwable $e) {
     // Don't crash the container if DB isn't reachable yet; Apache still starts.
     fwrite(STDERR, "[bootstrap] Schema init warning: " . $e->getMessage() . "\n");

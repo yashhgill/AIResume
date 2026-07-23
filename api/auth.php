@@ -28,9 +28,8 @@ if ($method === 'POST') {
             }
             exit;
         }
-        // Plug-and-play admin: if this email matches the ADMIN_EMAIL env var, promote once.
-        $adminEmail = getenv('ADMIN_EMAIL');
-        if ($adminEmail && strcasecmp($user['email'], $adminEmail) === 0 && empty($user['is_admin'])) {
+        // Plug-and-play admin: promote if this email is on the admin allow-list.
+        if (is_admin_email($user['email']) && empty($user['is_admin'])) {
             $pdo->prepare('UPDATE users SET is_admin=1 WHERE user_id=?')->execute([$user['user_id']]);
             $user['is_admin'] = 1;
         }
